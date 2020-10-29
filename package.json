@@ -1,0 +1,30 @@
+{
+  "name": "Facebook",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder . -m dir"
+  },
+  "build": {
+    "appId": "dev.yuhapps.facebook.katana",
+    "mac": {
+      "category": "your.app.category.type"
+    }
+  },
+  "dependencies": {
+    "electron-context-menu": "^2.3.0",
+    "electron-settings": "^4.0.2"
+  },
+  "devDependencies": {
+    "electron": "10.1.5",
+    "electron-builder": "20.44.1"
+  },
+  "postinstall": "electron-builder install-app-deps",
+  "keywords": [
+    "Facebook"
+  ],
+  "author": "YuhApps",
+  "license": "ISC"
+}

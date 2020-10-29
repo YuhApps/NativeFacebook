@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preferences</title>
+  <link rel="stylesheet" href="prefs.css">
+</head>
+<body>
+  <header>
+    <h3>Preferences</h3>
+  </header>
+  <div class="pref-wrapper">
+
+    <!-- On app close-->
+    <div class="pref">
+      <p class="pref-title">On app close:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="acb-close" name="acb" value="0">
+      <label for="acb-close">Remain active (standard macOS)</label><br>
+      <input type="radio" id="acb-quit" name="acb" value="1">
+      <label for="acb-quit">Force quit (cold launch)</label>
+    </div>
+
+    <!-- Open Messenger on launch -->
+    <div class="pref">
+      <p class="pref-title">Open Messenger on launch:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="msg-off" name="msg" value="0" checked>
+      <label for="msg-off">No</label><br>
+      <input type="radio" id="msg-on" name="msg" value="1">
+      <label for="msg-on">Yes</label><br>
+    </div>
+
+    <!-- Open Instagram on launch -->
+    <div class="pref">
+      <p class="pref-title">Open Instagram on launch:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="ins-off" name="ins" value="0" checked>
+      <label for="ins-off">No</label><br>
+      <input type="radio" id="ins-on" name="ins" value="1">
+      <label for="ins-on">Yes</label><br>
+    </div>
+
+  </div>
+
+  <script>
+    const { app } = require('electron')
+    const settings = require('electron-settings')
+    const radios = document.querySelectorAll('input[type="radio"]')
+    radios.forEach((radio) => {
+      radio.checked = (settings.getSync(radio.name) || 0) == radio.value
+      radio.addEventListener('change', () => {
+        settings.set(radio.name, radio.value)
+      })
+    })
+  </script>
+</body>
+</html>
