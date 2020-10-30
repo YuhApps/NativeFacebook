@@ -2,19 +2,19 @@
   "name": "Facebook",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder . -m dir"
+    "pack": "electron-builder"
   },
   "build": {
     "appId": "dev.yuhapps.facebook.katana",
     "mac": {
-      "category": "your.app.category.type"
+      "category": "Social",
+      "target": "zip"
     }
   },
   "dependencies": {
-    "electron-context-menu": "^2.3.0",
     "electron-settings": "^4.0.2"
   },
   "devDependencies": {
