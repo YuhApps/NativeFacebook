@@ -12,11 +12,11 @@ At the time being, the main supported platform is macOS. For example, the 'Faceb
 
 ## FOR DEVELOPERS ##
 
-If you wish to build and extend the app to add your customizations, it's very easy to do so. NodeJs is the only base requirement here. Then, in your Terminal, just simply execute these super familiar commands:
+If you wish to build and extend the app to add your customizations, it's very easy to do so. Node.js is the only base requirement here. Then, in your Terminal, just simply execute these super familiar commands:
 
 ```
   npm install
   npm start
 ```
 
-To build the project, use [electron-builder](https://www.electron.build/).
+To build the project, use [electron-builder](https://www.electron.build/). For more information, read DEVELOPERS.md

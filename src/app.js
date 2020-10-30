@@ -30,6 +30,7 @@ app.on('window-all-closed', () => {
 /** Create a browser window, used to createMainWindow and create a tab
  * @param url: The URL for the tab. The URL for mainWindow is 'https://www.facebook.com'
  * @see createMainWindow
+ * @see createContextMenuForWindow
  * @returns The window to be created.
  */
 function createBrowserWindow(url, x, y, width, height) {
@@ -50,7 +51,8 @@ function createBrowserWindow(url, x, y, width, height) {
   window.loadURL(url)
 
   // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
-  window.webContents.on('new-window', (event, url, frameName, disposition, options, additionalFeatures, referrer, postBody) => {
+  // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
+  window.webContents.on('new-window', (event, url) => {
     event.preventDefault()
     let focusedWindow = BrowserWindow.getFocusedWindow()
     focusedWindow.addTabbedWindow(createBrowserWindow(url))
@@ -222,12 +224,13 @@ function createAppMenu() {
 
 /**
  * Create context menu for each BrowserWindow.
+ * @returns The created menu.
  * @see createBrowserWindow
  */
 function createContextMenuForWindow(browserWindow, params) {
   let menu = new Menu()
 
-  // Link handlers
+  // Link handlers, top priority
   menu.append(new MenuItem({
     label: 'Open link in New Tab',
     visible: params.linkURL,
@@ -261,7 +264,7 @@ function createContextMenuForWindow(browserWindow, params) {
     visible: params.linkURL
   }))
 
-  // macOS Look Up
+  // macOS Look Up and Search with Google
   menu.append(new MenuItem({
     id: 'look-up',
     label: 'Look Up \"' + params.selectionText + '\"',
@@ -292,18 +295,15 @@ function createContextMenuForWindow(browserWindow, params) {
     label: 'Copy Image Address',
     visible: params.mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
-      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL;
-      electron.clipboard.write({
-        bookmark: url,
-        text: url
-      });
+      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL
+      electron.clipboard.writeText(url)
     }
   }))
   menu.append(new MenuItem({
     label: 'Save Image As…',
     visible: params.mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
-      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL;
+      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL
       browserWindow.webContents.downloadURL(url)
     }
   }))
@@ -353,7 +353,8 @@ function createContextMenuForWindow(browserWindow, params) {
     type: 'separator',
     visible: params.isEditable|| params.selectionText
   }))
-  /*
+
+  /* To be used later if necessary
   menu.append(new MenuItem({
     label: 'Undo',
     enabled: params.editFlags.canUndo,
