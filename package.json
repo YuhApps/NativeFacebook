@@ -5,11 +5,18 @@
   "main": "src/app.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder"
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder build"
   },
   "build": {
     "appId": "dev.yuhapps.facebook.katana",
+    "files": [
+      "**/*",
+      "*",
+      "**"
+    ],
     "mac": {
+      "asar": true,
       "category": "Social",
       "target": "zip"
     }

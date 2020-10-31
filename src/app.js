@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, Menu, MenuItemConstructorOptions, MenuItem, shell } = require('electron')
+const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, shell, TouchBar } = require('electron')
 const settings = require('electron-settings')
 
 let mainWindow
@@ -13,6 +13,8 @@ app.whenReady().then(() => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createMainWindow()
+  } else if (mainWindow) {
+    mainWindow.show()
   }
 })
 
@@ -43,12 +45,12 @@ function createBrowserWindow(url, x, y, width, height) {
     webviewTag: true,
     webPreferences: {
       webSecurity: true,
-      tabbingIdentifier: "FB",
       plugins: true
     }
   })
 
   window.loadURL(url)
+  createTouchBarForWindow(window)
 
   // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
   // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
@@ -66,6 +68,9 @@ function createBrowserWindow(url, x, y, width, height) {
   window.on('page-title-updated', (event, title, explicitSet) => {
     // event.preventDefault()
   })
+
+  
+
   return window
 }
 
@@ -201,7 +206,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'New Instagram Tab',
-        click: () => {
+        click: (menuItem, browserWindow, event) => {
           let allWindows = BrowserWindow.getAllWindows()
           if (allWindows.length > 0) {
             allWindows[allWindows.length - 1].addTabbedWindow(createBrowserWindow('https://www.instagram.com'))
@@ -232,28 +237,28 @@ function createContextMenuForWindow(browserWindow, params) {
 
   // Link handlers, top priority
   menu.append(new MenuItem({
-    label: 'Open link in New Tab',
+    label: 'Open Link in New Tab',
     visible: params.linkURL,
     click: (menuItem, browserWindow, event) => {
       if (browserWindow) browserWindow.addTabbedWindow(createBrowserWindow(params.linkURL))
     }
   }))
   menu.append(new MenuItem({
-    label: 'Open link in Browser',
+    label: 'Open Link in Browser',
     visible: params.linkURL,
     click: (menuItem, browserWindow, event) => {
       shell.openExternal(params.linkURL)
     }
   }))
   menu.append(new MenuItem({
-    label: 'Copy link URL',
+    label: 'Copy Link Address',
     visible: params.linkURL,
     click: (menuItem, browserWindow, event) => {
       clipboard.writeText(params.linkURL)
     }
   }))
   menu.append(new MenuItem({
-    label: 'Copy link text',
+    label: 'Copy Link Text',
     visible: params.linkURL,
     click: (menuItem, browserWindow, event) => {
       clipboard.writeText(params.linkText)
@@ -402,4 +407,58 @@ function createContextMenuForWindow(browserWindow, params) {
   }))
   menu.append(new MenuItem({ type: 'separator' }))
   return menu
+}
+
+/**
+ * Initialize TouchBar (MBP only)
+ */
+function createTouchBarForWindow(window) {
+  window.setTouchBar(
+    new TouchBar({
+      items: [
+        new TouchBar.TouchBarButton({
+          icon: nativeImage.createFromPath('src/assets/facebook.png'),
+          label: 'Facebook',
+          click: () => {
+            let browserWindow = BrowserWindow.getFocusedWindow()
+            if (browserWindow) {
+              browserWindow.addTabbedWindow(createBrowserWindow('https://www.facebook.com'))
+            } else {
+              let s = settings.getSync('mainWindow')
+              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
+              mainWindow = createBrowserWindow('https://www.facebook.com', x, y, width, height)
+            }
+          }
+        }),
+        new TouchBar.TouchBarButton({
+          icon: nativeImage.createFromPath('src/assets/messenger.png'),
+          label: 'Messenger',
+          click: () => {
+            let browserWindow = BrowserWindow.getFocusedWindow()
+            if (browserWindow) {
+              browserWindow.addTabbedWindow(createBrowserWindow('https://www.messenger.com'))
+            } else {
+              let s = settings.getSync('mainWindow')
+              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
+              mainWindow = createBrowserWindow('https://www.messenger.com', x, y, width, height)
+            }
+          }
+        }),
+        new TouchBar.TouchBarButton({
+          icon: nativeImage.createFromPath('src/assets/instagram.png'),
+          label: 'Instagram',
+          click: () => {
+            let browserWindow = BrowserWindow.getFocusedWindow()
+            if (browserWindow) {
+              browserWindow.addTabbedWindow(createBrowserWindow('https://www.instagram.com'))
+            } else {
+              let s = settings.getSync('mainWindow')
+              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
+              mainWindow = createBrowserWindow('https://www.instagram.com', x, y, width, height)
+            }
+          }
+        }),
+      ]
+    })
+  )
 }
