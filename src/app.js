@@ -1,5 +1,6 @@
 const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, shell, TouchBar } = require('electron')
 const settings = require('electron-settings')
+const path = require('path')
 
 let mainWindow
 
@@ -413,12 +414,12 @@ function createContextMenuForWindow(browserWindow, params) {
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
+  let resizeOptions = { width: 24, height: 24 }
   window.setTouchBar(
     new TouchBar({
       items: [
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath('src/assets/facebook.png'),
-          label: 'Facebook',
+          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/facebook.png')).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -431,8 +432,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath('src/assets/messenger.png'),
-          label: 'Messenger',
+          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/messenger.png')).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -445,8 +445,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath('src/assets/instagram.png'),
-          label: 'Instagram',
+          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/instagram.png')).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {

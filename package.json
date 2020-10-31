@@ -10,10 +10,8 @@
   },
   "build": {
     "appId": "dev.yuhapps.facebook.katana",
-    "files": [
-      "**/*",
-      "*",
-      "**"
+    "extraResources": [
+      "assets/**"
     ],
     "mac": {
       "asar": true,
