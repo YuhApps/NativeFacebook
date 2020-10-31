@@ -63,15 +63,8 @@ function createBrowserWindow(url, x, y, width, height) {
 
   // Create context menu for each window
   window.webContents.on('context-menu', (event, params) => {
-    createContextMenuForWindow(window, params).popup()
+    createContextMenuForWindow(params).popup()
   })
-
-  window.on('page-title-updated', (event, title, explicitSet) => {
-    // event.preventDefault()
-  })
-
-  
-
   return window
 }
 
@@ -113,13 +106,9 @@ function createAppMenu() {
   let appMenu = new MenuItem({
     label: 'Facebook',
     submenu: [
-      {
-        role: 'about'
-      },
-      {
-        type: 'separator',
-      },
-      {
+      new MenuItem({ role: 'about' }),
+      new MenuItem({type: 'separator' }),
+      new MenuItem({
         label: 'Preferences',
         accelerator: 'Cmd+,',
         click: () => {
@@ -134,25 +123,13 @@ function createAppMenu() {
           })
           window.loadFile('src/' + 'prefs.html')
         },
-      },
-      {
-        type: 'separator',
-      },
-      {
-        role: 'services'
-      },
-      {
-        role: 'hide'
-      },
-      {
-        role: 'hideOthers'
-      },
-      {
-        type: 'separator',
-      },
-      {
-        role: 'quit'
-      },
+      }),
+      new MenuItem({ type: 'separator' }),
+      new MenuItem({ role: 'services' }),
+      new MenuItem({ role: 'hide' }),
+      new MenuItem({ role: 'hideOthers' }),
+      new MenuItem({ type: 'separator' }),
+      new MenuItem({ role: 'quit' }),
     ],
   })
   let file = new MenuItem({
@@ -232,8 +209,9 @@ function createAppMenu() {
  * Create context menu for each BrowserWindow.
  * @returns The created menu.
  * @see createBrowserWindow
+ * @see Electron.ContextMenuParams
  */
-function createContextMenuForWindow(browserWindow, params) {
+function createContextMenuForWindow(params) {
   let menu = new Menu()
 
   // Link handlers, top priority
@@ -383,7 +361,7 @@ function createContextMenuForWindow(browserWindow, params) {
   }))
   */
 
-  // Navigators
+  // Navigators, always available
   menu.append(new MenuItem({
     label: 'Go Back',
     enabled: BrowserWindow.getFocusedWindow().webContents.canGoBack(),
