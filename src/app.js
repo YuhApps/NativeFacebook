@@ -26,6 +26,11 @@ app.on('window-all-closed', () => {
   }
 })
 
+app.setLoginItemSettings({
+  openAtLogin: settings.getSync('auto-launch') === 1 || false,
+  openAsHidden: true,
+})
+
 /** End of Basic Electron app events. */
 
 /**************************************/
@@ -115,7 +120,7 @@ function createAppMenu() {
           let window = new BrowserWindow({
             webPreferences: {
               webSecurity: true,
-              tabbingIdentifier: "FB",
+              tabbingIdentifier: "Prefs",
               plugins: true,
               nodeIntegration: true,
               enableRemoteModule: true
@@ -196,12 +201,54 @@ function createAppMenu() {
         },
       }),
       new MenuItem({ type: 'separator' }),
-      new MenuItem({ role: 'close' }),
+      new MenuItem({
+        id: 'hide-on-mac-prefs',
+        label: 'Preferences',
+        click: () => {
+          let window = new BrowserWindow({
+            webPreferences: {
+              webSecurity: true,
+              tabbingIdentifier: "Prefs",
+              plugins: true,
+              nodeIntegration: true,
+              enableRemoteModule: true
+            }
+          })
+          window.loadFile('src/' + 'prefs.html')
+        },
+      }),
+      new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator' }),
+      new MenuItem({ role: 'close' })
     ],
   })
+
+  // Edit menu
   let edit = new MenuItem({ role: 'editMenu' })
+
+  // Window menu
   let window = new MenuItem({ role: 'windowMenu' })
-  let template = [ appMenu, file, edit, window ]
+
+  // Help menu
+  let help = new MenuItem({
+    label: 'Help', 
+    role: 'help',
+    submenu: [
+      new MenuItem({
+        label: 'Developed by YUH APPS'
+      })
+    ]
+  })
+
+  // Build app menu. On macOS, the 'Preferences' is placed in the Facebook menu (appMenu).
+  // On Linux and Windows, it's placed in the 'File' menu instead.
+  let template
+  if (process.platform === 'darwin') {
+    // Hide the 'File/Preferences' menu item because it's already placed in the 'Facebook' menu.
+    file.submenu.items.find((item) => item.id && item.id.startsWith('hide-on-mac')).visible = false
+    template = [ appMenu, file, edit, window, help ]
+  } else {
+    template = [ file, edit, window, help ]
+  }
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
@@ -392,12 +439,17 @@ function createContextMenuForWindow(params) {
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
+  function resolvePath(name, useMonoIcon) {
+    let m = useMonoIcon == 1 ? '_mono' : ''
+    return path.join(__dirname, `/assets/${name}${m}.png`)
+  }
   let resizeOptions = { width: 24, height: 24 }
+  let useMonoIcon = settings.getSync('mono-icons') || 0
   window.setTouchBar(
     new TouchBar({
       items: [
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/facebook.png')).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('facebook', useMonoIcon)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -410,7 +462,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/messenger.png')).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('messenger', useMonoIcon)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -423,7 +475,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(path.join(__dirname, '/assets/instagram.png')).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('instagram', useMonoIcon)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {

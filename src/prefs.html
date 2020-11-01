@@ -13,13 +13,31 @@
   <div class="pref-wrapper">
 
     <!-- On app close-->
-    <div class="pref">
+    <div class="pref mac">
       <p class="pref-title">On app close:</p>
       <!-- acb: App close behavior -->
       <input type="radio" id="acb-close" name="acb" value="0">
       <label for="acb-close">Remain active (standard macOS)</label><br>
       <input type="radio" id="acb-quit" name="acb" value="1">
       <label for="acb-quit">Force quit (cold launch)</label>
+    </div>
+
+    <div class="pref mac">
+      <p class="pref-title">Auto launch on Log in:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="auto-launch-off" name="auto-launch" value="0" checked>
+      <label for="auto-launch-off">No</label><br>
+      <input type="radio" id="auto-launch-on" name="auto-launch" value="1">
+      <label for="auto-launch-on">Yes</label><br>
+    </div>
+
+    <div class="pref mac">
+      <p class="pref-title">Use mono icons on Touch Bar (require restart):</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="mono-icons-off" name="mono-icons" value="0" checked>
+      <label for="mono-icons-off">No</label><br>
+      <input type="radio" id="mono-icons-on" name="mono-icons" value="1">
+      <label for="mono-icons-on">Yes</label><br>
     </div>
 
     <!-- Open Messenger on launch -->
@@ -45,13 +63,27 @@
   </div>
 
   <script>
-    const { app } = require('electron')
+    const { app, remote } = require('electron')
     const settings = require('electron-settings')
+    const macPrefs = document.querySelectorAll('.mac')
     const radios = document.querySelectorAll('input[type="radio"]')
+
+    macPrefs.forEach((pref) => {
+      if (remote.process.platform !== 'darwin') {
+        pref.setAttribute('visibility', 'hidden')
+      }
+    })
+
     radios.forEach((radio) => {
       radio.checked = (settings.getSync(radio.name) || 0) == radio.value
       radio.addEventListener('change', () => {
         settings.set(radio.name, radio.value)
+        // if (radio.name === 'auto-launch') {
+        //   app.setLoginItemSettings({
+        //     openAtLogin: radio.value,
+        //     openAsHidden: true,
+        //   })
+        // }
       })
     })
   </script>
