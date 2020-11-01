@@ -2,7 +2,7 @@ const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, shell, Touch
 const settings = require('electron-settings')
 const path = require('path')
 
-let mainWindow
+let mainWindow, prefsWindow
 
 /** Basic Electron app events: */
 
@@ -99,6 +99,28 @@ function createMainWindow () {
 }
 
 /**
+ * Create the prefsWindow
+ * @see prefsWindow
+ */
+function createPrefsWindow() {
+  if (prefsWindow) {
+    prefsWindow.show()
+  } else {
+    prefsWindow = new BrowserWindow({
+      webPreferences: {
+        webSecurity: true,
+        tabbingIdentifier: "Prefs",
+        plugins: true,
+        nodeIntegration: true,
+        enableRemoteModule: true
+      }
+    })
+    prefsWindow.loadFile('src/' + 'prefs.html')
+  }
+  prefsWindow.on('closed', () => prefsWindow = null)
+}
+
+/**
  * Create the app menu.
  * @see app.whenReady
  */
@@ -111,18 +133,7 @@ function createAppMenu() {
       new MenuItem({
         label: 'Preferences',
         accelerator: 'Cmd+,',
-        click: () => {
-          let window = new BrowserWindow({
-            webPreferences: {
-              webSecurity: true,
-              tabbingIdentifier: "Prefs",
-              plugins: true,
-              nodeIntegration: true,
-              enableRemoteModule: true
-            }
-          })
-          window.loadFile('src/' + 'prefs.html')
-        },
+        click: createPrefsWindow,
       }),
       new MenuItem({ type: 'separator' }),
       new MenuItem({ role: 'services' }),
@@ -199,18 +210,7 @@ function createAppMenu() {
       new MenuItem({
         id: 'hide-on-mac-prefs',
         label: 'Preferences',
-        click: () => {
-          let window = new BrowserWindow({
-            webPreferences: {
-              webSecurity: true,
-              tabbingIdentifier: "Prefs",
-              plugins: true,
-              nodeIntegration: true,
-              enableRemoteModule: true
-            }
-          })
-          window.loadFile('src/' + 'prefs.html')
-        },
+        click: createPrefsWindow
       }),
       new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator' }),
       new MenuItem({ role: 'close' })
@@ -253,83 +253,83 @@ function createAppMenu() {
  * @see createBrowserWindow
  * @see Electron.ContextMenuParams
  */
-function createContextMenuForWindow(params) {
+function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, selectionText, srcURL }) {
   let menu = new Menu()
 
   // Link handlers, top priority
   menu.append(new MenuItem({
     label: 'Open Link in New Tab',
-    visible: params.linkURL,
+    visible: linkURL,
     click: (menuItem, browserWindow, event) => {
-      if (browserWindow) browserWindow.addTabbedWindow(createBrowserWindow(params.linkURL))
+      if (browserWindow) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
     }
   }))
   menu.append(new MenuItem({
     label: 'Open Link in Browser',
-    visible: params.linkURL,
+    visible: linkURL,
     click: (menuItem, browserWindow, event) => {
-      shell.openExternal(params.linkURL)
+      shell.openExternal(linkURL)
     }
   }))
   menu.append(new MenuItem({
     label: 'Copy Link Address',
-    visible: params.linkURL,
+    visible: linkURL,
     click: (menuItem, browserWindow, event) => {
-      clipboard.writeText(params.linkURL)
+      clipboard.writeText(linkURL)
     }
   }))
   menu.append(new MenuItem({
-    label: 'Copy Link Text',
-    visible: params.linkURL,
+    label: 'Copy \"' + (linkText.length < 61 ? linkText : linkText.substring(0, 58) + "...") + '\"',
+    visible: linkURL && linkText,
     click: (menuItem, browserWindow, event) => {
-      clipboard.writeText(params.linkText)
+      clipboard.writeText(linkText)
     }
   }))
   menu.append(new MenuItem({
     type: 'separator',
-    visible: params.linkURL
+    visible: linkURL
   }))
 
   // macOS Look Up and Search with Google
   menu.append(new MenuItem({
     id: 'look-up',
-    label: 'Look Up \"' + params.selectionText + '\"',
-    visible: process.platform === 'darwin' && params.selectionText.trim(),
+    label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
+    visible: process.platform === 'darwin' && selectionText.trim(),
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.showDefinitionForSelection()
     }
   }))
   menu.append(new MenuItem({
     type: 'separator',
-    visible: process.platform === 'darwin' && params.selectionText.trim()
+    visible: process.platform === 'darwin' && selectionText.trim()
   }))
   menu.append(new MenuItem({
     id: 'google-search',
     label: 'Search with Google',
-    visible: process.platform === 'darwin' && params.selectionText.trim(),
+    visible: process.platform === 'darwin' && selectionText.trim(),
     click: (menuItem, browserWindow, event) => {
-      shell.openExternal('https://www.google.com/search?q=' + params.selectionText)
+      shell.openExternal('https://www.google.com/search?q=' + selectionText)
     }
   }))
   menu.append(new MenuItem({
     type: 'separator',
-    visible: process.platform === 'darwin' && params.selectionText
+    visible: process.platform === 'darwin' && selectionText
   }))
 
   // Image handlers, only displays with <img>
   menu.append(new MenuItem({
     label: 'Copy Image Address',
-    visible: params.mediaType === 'image',
+    visible: mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
-      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL
+      let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
       electron.clipboard.writeText(url)
     }
   }))
   menu.append(new MenuItem({
     label: 'Save Image As…',
-    visible: params.mediaType === 'image',
+    visible: mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
-      let url = menuItem.transform ? menuItem.transform(params.srcURL) : params.srcURL
+      let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
       browserWindow.webContents.downloadURL(url)
     }
   }))
@@ -337,69 +337,69 @@ function createContextMenuForWindow(params) {
   // Editable handlers (<input />)
   menu.append(new MenuItem({
     label: 'Cut',
-    enabled: params.editFlags.canCut,
-    visible: params.isEditable,
+    enabled: editFlags.canCut,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.cut()
     }
   }))
   menu.append(new MenuItem({
     label: 'Copy',
-    enabled: params.editFlags.canCopy,
-    visible: !params.linkURL && (params.isEditable || params.selectionText),
+    enabled: editFlags.canCopy,
+    visible: !linkURL && (isEditable || selectionText),
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.copy()
     }
   }))
   menu.append(new MenuItem({
     label: 'Paste',
-    enabled: params.editFlags.canPaste,
-    visible: params.isEditable,
+    enabled: editFlags.canPaste,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.paste()
     }
   }))
   menu.append(new MenuItem({
     label: 'Paste and Match Style',
-    enabled: params.editFlags.canPaste,
-    visible: params.isEditable,
+    enabled: editFlags.canPaste,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.pasteAndMatchStyle()
     }
   }))
   menu.append(new MenuItem({
     label: 'Select all',
-    enabled: params.editFlags.canSelectAll,
-    visible: params.isEditable,
+    enabled: editFlags.canSelectAll,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.cut()
     }
   }))
   menu.append(new MenuItem({
     type: 'separator',
-    visible: params.isEditable|| params.selectionText
+    visible: isEditable|| selectionText
   }))
 
   /* To be used later if necessary
   menu.append(new MenuItem({
     label: 'Undo',
-    enabled: params.editFlags.canUndo,
-    visible: params.isEditable,
+    enabled: editFlags.canUndo,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.undo()
     }
   }))
   menu.append(new MenuItem({
     label: 'Redo',
-    enabled: params.editFlags.canRedo,
-    visible: params.isEditable,
+    enabled: editFlags.canRedo,
+    visible: isEditable,
     click: (menuItem, browserWindow, event) => {
       browserWindow.webContents.redo()
     }
   }))
   menu.append(new MenuItem({
     type: 'separator',
-    visible: params.isEditable
+    visible: isEditable
   }))
   */
 
