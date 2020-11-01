@@ -26,11 +26,6 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.setLoginItemSettings({
-  openAtLogin: settings.getSync('auto-launch') === 1 || false,
-  openAsHidden: true,
-})
-
 /** End of Basic Electron app events. */
 
 /**************************************/
@@ -439,17 +434,14 @@ function createContextMenuForWindow(params) {
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
-  function resolvePath(name, useMonoIcon) {
-    let m = useMonoIcon == 1 ? '_mono' : ''
-    return path.join(__dirname, `/assets/${name}${m}.png`)
-  }
+  let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono == 1 ? '_mono' : ''}.png`)
   let resizeOptions = { width: 24, height: 24 }
-  let useMonoIcon = settings.getSync('mono-icons') || 0
+  let useMonoIcons = settings.getSync('mono-icons') || 0
   window.setTouchBar(
     new TouchBar({
       items: [
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('facebook', useMonoIcon)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('facebook', useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -462,7 +454,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('messenger', useMonoIcon)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('messenger', useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -475,7 +467,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('instagram', useMonoIcon)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath('instagram', useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
