@@ -2,6 +2,16 @@ const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, shell, Touch
 const settings = require('electron-settings')
 const path = require('path')
 
+const FACEBOOK_URL = 'https://www.facebook.com'
+const MESSENGER_URL = 'https://www.messenger.com'
+const INSTAGRAM_URL = 'https://www.instagram.com'
+
+const FACEBOOK = 'facebook'
+const MESSENGER = 'messenger'
+const INSTAGRAM = 'instagram'
+
+const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
+
 let mainWindow, prefsWindow
 
 /** Basic Electron app events: */
@@ -12,7 +22,7 @@ app.whenReady().then(() => {
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (BrowserWindow.getAllWindows().length === 0 || mainWindow.isDestroyed()) {
     createMainWindow()
   } else if (mainWindow) {
     mainWindow.show()
@@ -36,12 +46,13 @@ app.on('window-all-closed', () => {
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, x, y, width, height) {
+function createBrowserWindow(url, bounds) {
+  let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
   let window = new BrowserWindow({
     x: x,
     y: y,
-    width: width || 1280,
-    height: height || 800,
+    width: width,
+    height: height,
     title: "New Tab",
     webviewTag: true,
     webPreferences: {
@@ -73,20 +84,18 @@ function createBrowserWindow(url, x, y, width, height) {
  * @see mainWindow
  * @see createBrowserWindow
  */
-function createMainWindow () {
-  let s = settings.getSync('mainWindow')
-  let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-  mainWindow = createBrowserWindow('https://www.facebook.com', x, y, width, height)
+function createMainWindow(url) {
+  mainWindow = createBrowserWindow(url || FACEBOOK_URL)
   mainWindow.on('ready-to-show', () => {
     let ins = settings.getSync('ins') || 0
     let msg = settings.getSync('msg') || 0
     if (ins == 1) {
       let focusedWindow = BrowserWindow.getFocusedWindow()
-      focusedWindow.addTabbedWindow(createBrowserWindow('https://www.instagram.com'))
+      focusedWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
     }
     if (msg == 1) {
       let focusedWindow = BrowserWindow.getFocusedWindow()
-      focusedWindow.addTabbedWindow(createBrowserWindow('https://www.messenger.com'))
+      focusedWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
     }
     mainWindow.focus()
   })
@@ -172,37 +181,37 @@ function createAppMenu() {
       new MenuItem({
         label: 'New Facebook Tab',
         click: (menuItem, browserWindow, event) => {
-          if (browserWindow) {
-            browserWindow.addTabbedWindow(createBrowserWindow('https://www.facebook.com'))
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(FACEBOOK_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
           } else {
-            let s = settings.getSync('mainWindow')
-            let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-            mainWindow = createBrowserWindow('https://www.facebook.com', x, y, width, height)
+            mainWindow = createBrowserWindow(FACEBOOK_URL)
           }
         },
       }),
       new MenuItem({
         label: 'New Messenger Tab',
         click: (menuItem, browserWindow, event) => {
-          if (browserWindow) {
-            browserWindow.addTabbedWindow(createBrowserWindow('https://www.messenger.com'))
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(MESSENGER_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
           } else {
-            let s = settings.getSync('mainWindow')
-            let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-            mainWindow = createBrowserWindow('https://www.messenger.com', x, y, width, height)
+            let bounds = settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
+            mainWindow = createBrowserWindow(MESSENGER_URL, bounds)
           }
         },
       }),
       new MenuItem({
         label: 'New Instagram Tab',
         click: (menuItem, browserWindow, event) => {
-          let allWindows = BrowserWindow.getAllWindows()
-          if (allWindows.length > 0) {
-            allWindows[allWindows.length - 1].addTabbedWindow(createBrowserWindow('https://www.instagram.com'))
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(INSTAGRAM_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
           } else {
-            let s = settings.getSync('mainWindow')
-            let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-            mainWindow = createBrowserWindow('https://www.instagram.com', x, y, width, height)
+            mainWindow = createBrowserWindow(INSTAGRAM_URL)
           }
         },
       }),
@@ -441,41 +450,35 @@ function createTouchBarForWindow(window) {
     new TouchBar({
       items: [
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('facebook', useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(FACEBOOK, useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
-              browserWindow.addTabbedWindow(createBrowserWindow('https://www.facebook.com'))
+              browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
             } else {
-              let s = settings.getSync('mainWindow')
-              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-              mainWindow = createBrowserWindow('https://www.facebook.com', x, y, width, height)
+              mainWindow = createBrowserWindow(FACEBOOK_URL)
             }
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('messenger', useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(MESSENGER, useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
-              browserWindow.addTabbedWindow(createBrowserWindow('https://www.messenger.com'))
+              browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
             } else {
-              let s = settings.getSync('mainWindow')
-              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-              mainWindow = createBrowserWindow('https://www.messenger.com', x, y, width, height)
+              mainWindow = createBrowserWindow(MESSENGER_URL)
             }
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath('instagram', useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(INSTAGRAM, useMonoIcons)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
-              browserWindow.addTabbedWindow(createBrowserWindow('https://www.instagram.com'))
+              browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
             } else {
-              let s = settings.getSync('mainWindow')
-              let { x, y, width, height } = s || { x: undefined, y: undefined, width: 1280, height: 800 }
-              mainWindow = createBrowserWindow('https://www.instagram.com', x, y, width, height)
+              mainWindow = createBrowserWindow(INSTAGRAM_URL)
             }
           }
         }),
