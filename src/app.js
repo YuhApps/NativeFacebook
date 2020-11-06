@@ -262,7 +262,7 @@ function createAppMenu() {
  * @see createBrowserWindow
  * @see Electron.ContextMenuParams
  */
-function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, selectionText, srcURL }) {
+function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, selectionText, srcURL, x, y }) {
   let menu = new Menu()
 
   // Link handlers, top priority
@@ -331,7 +331,14 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     visible: mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
       let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-      electron.clipboard.writeText(url)
+      clipboard.writeText(url)
+    }
+  }))
+  menu.append(new MenuItem({
+    label: 'Copy Image to Clipboard',
+    visible: mediaType === 'image',
+    click: (menuItem, browserWindow, event) => {
+      browserWindow.webContents.copyImageAt(x, y)
     }
   }))
   menu.append(new MenuItem({
