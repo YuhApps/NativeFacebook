@@ -1,5 +1,5 @@
 body {
-  font-family: 'Roboto';
+  font-family: 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
   margin: 0;
   padding: 0;
   user-select: none;

@@ -30,8 +30,8 @@ app.on('activate', () => {
 })
 
 app.on('window-all-closed', () => {
-  let acb = settings.getSync('acb') || 0
-  if (process.platform !== 'darwin' || acb == 1) {
+  let acb = settings.getSync('acb') || '0'
+  if (process.platform !== 'darwin' || acb === '1') {
     app.quit()
   }
 })
@@ -42,6 +42,7 @@ app.on('window-all-closed', () => {
 
 /** Create a browser window, used to createMainWindow and create a tab
  * @param url: The URL for the tab. The URL for mainWindow is 'https://www.facebook.com'
+ * @param bounds: Window bounds
  * @see createMainWindow
  * @see createContextMenuForWindow
  * @returns The window to be created.
@@ -87,13 +88,13 @@ function createBrowserWindow(url, bounds) {
 function createMainWindow(url) {
   mainWindow = createBrowserWindow(url || FACEBOOK_URL)
   mainWindow.on('ready-to-show', () => {
-    let ins = settings.getSync('ins') || 0
-    let msg = settings.getSync('msg') || 0
-    if (ins == 1) {
+    let ins = settings.getSync('ins') || '0'
+    let msg = settings.getSync('msg') || '0'
+    if (ins === '1') {
       let focusedWindow = BrowserWindow.getFocusedWindow()
       focusedWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
     }
-    if (msg == 1) {
+    if (msg === '1') {
       let focusedWindow = BrowserWindow.getFocusedWindow()
       focusedWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
     }
@@ -134,6 +135,8 @@ function createPrefsWindow() {
  * @see app.whenReady
  */
 function createAppMenu() {
+  let dev = settings.getSync('dev') || '0'
+  console.log(dev)
   let appMenu = new MenuItem({
     label: 'Facebook',
     submenu: [
@@ -222,6 +225,14 @@ function createAppMenu() {
         click: createPrefsWindow
       }),
       new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator' }),
+      new MenuItem({
+        label: 'Open Developer Tools',
+        visible: dev === '1',
+        click: (menuItem, browserWindow, event) => {
+          if (browserWindow) browserWindow.webContents.openDevTools()
+        }
+      }),
+      new MenuItem({ type: 'separator', visible: dev === '1' }),
       new MenuItem({ role: 'close' })
     ],
   })
@@ -264,7 +275,8 @@ function createAppMenu() {
  */
 function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, selectionText, srcURL, x, y }) {
   let menu = new Menu()
-
+  let dev = settings.getSync('dev') || '0'
+  console.log(dev)
   // Link handlers, top priority
   menu.append(new MenuItem({
     label: 'Open Link in New Tab',
@@ -281,7 +293,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     }
   }))
   menu.append(new MenuItem({
-    label: 'Copy Link Address',
+    label: 'Copy Link address',
     visible: linkURL,
     click: (menuItem, browserWindow, event) => {
       clipboard.writeText(linkURL)
@@ -327,7 +339,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
 
   // Image handlers, only displays with <img>
   menu.append(new MenuItem({
-    label: 'Copy Image Address',
+    label: 'Copy Image address',
     visible: mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
       let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
@@ -342,7 +354,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     }
   }))
   menu.append(new MenuItem({
-    label: 'Save Image As…',
+    label: 'Save Image',
     visible: mediaType === 'image',
     click: (menuItem, browserWindow, event) => {
       let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
@@ -442,7 +454,18 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
       if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
     }
   }))
-  menu.append(new MenuItem({ type: 'separator' }))
+
+
+  // Inspect elements (dev tools)
+  menu.append(new MenuItem({ type: 'separator', visible: dev === '1' }))
+  menu.append(new MenuItem({
+    label: 'Inspect elements',
+    visible: dev === '1',
+    click: (menuItem, browserWindow, event) => {
+      if (browserWindow) browserWindow.webContents.inspectElement(x, y)
+    }
+  }))
+
   return menu
 }
 
@@ -452,7 +475,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
 function createTouchBarForWindow(window) {
   let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono == 1 ? '_mono' : ''}.png`)
   let resizeOptions = { width: 24, height: 24 }
-  let useMonoIcons = settings.getSync('mono-icons') || 0
+  let useMonoIcons = settings.getSync('mono-icons') || '0'
   window.setTouchBar(
     new TouchBar({
       items: [

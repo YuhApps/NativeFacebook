@@ -51,6 +51,16 @@
       <label for="ins-on">Yes</label><br>
     </div>
 
+    <!-- Dev mode on launch -->
+    <div class="pref">
+      <p class="pref-title">Developer mode:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="dev-off" name="dev" value="0" checked>
+      <label for="dev-off">No</label><br>
+      <input type="radio" id="dev-on" name="dev" value="1">
+      <label for="dev-on">Yes</label><br>
+    </div>
+
   </div>
 
   <script>
@@ -66,15 +76,9 @@
     })
 
     radios.forEach((radio) => {
-      radio.checked = (settings.getSync(radio.name) || 0) == radio.value
+      radio.checked = (settings.getSync(radio.name) || 0) === radio.value
       radio.addEventListener('change', () => {
         settings.set(radio.name, radio.value)
-        // if (radio.name === 'auto-launch') {
-        //   app.setLoginItemSettings({
-        //     openAtLogin: radio.value,
-        //     openAsHidden: true,
-        //   })
-        // }
       })
     })
   </script>
