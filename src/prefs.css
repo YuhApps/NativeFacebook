@@ -1,5 +1,5 @@
 body {
-  font-family: 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+  font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
   margin: 0;
   padding: 0;
   user-select: none;
@@ -21,6 +21,10 @@ header h3 {
 
 ul {
   list-style: none;
+}
+
+.hidden {
+  visibility: hidden;
 }
 
 .pref-wrapper {

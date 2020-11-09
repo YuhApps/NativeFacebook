@@ -25,9 +25,9 @@
     <div class="pref mac">
       <p class="pref-title">Use mono icons on Touch Bar (require restart):</p>
       <!-- acb: App close behavior -->
-      <input type="radio" id="mono-icons-off" name="mono-icons" value="0" checked>
+      <input type="radio" id="mono-icons-off" name="mono" value="0" checked>
       <label for="mono-icons-off">No</label><br>
-      <input type="radio" id="mono-icons-on" name="mono-icons" value="1">
+      <input type="radio" id="mono-icons-on" name="mono" value="1">
       <label for="mono-icons-on">Yes</label><br>
     </div>
 
@@ -51,6 +51,16 @@
       <label for="ins-on">Yes</label><br>
     </div>
 
+    <!-- Spell check -->
+    <div class="pref">
+      <p class="pref-title">Spell check:</p>
+      <!-- acb: App close behavior -->
+      <input type="radio" id="spell-off" name="spell" value="0" checked>
+      <label for="spell-off">No</label><br>
+      <input type="radio" id="spell-on" name="spell" value="1">
+      <label for="spell-on">Yes</label><br>
+    </div>
+
     <!-- Dev mode on launch -->
     <div class="pref">
       <p class="pref-title">Developer mode:</p>
@@ -71,12 +81,12 @@
 
     macPrefs.forEach((pref) => {
       if (remote.process.platform !== 'darwin') {
-        pref.setAttribute('visibility', 'hidden')
+        pref.classList.add('hidden')
       }
     })
 
     radios.forEach((radio) => {
-      radio.checked = (settings.getSync(radio.name) || 0) === radio.value
+      radio.checked = (settings.getSync(radio.name) || '0') === radio.value
       radio.addEventListener('change', () => {
         settings.set(radio.name, radio.value)
       })

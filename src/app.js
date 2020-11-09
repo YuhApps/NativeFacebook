@@ -58,7 +58,8 @@ function createBrowserWindow(url, bounds) {
     webviewTag: true,
     webPreferences: {
       webSecurity: true,
-      plugins: true
+      plugins: true,
+      spellcheck: settings.getSync('spell') === '1' || false
     }
   })
 
@@ -75,6 +76,7 @@ function createBrowserWindow(url, bounds) {
 
   // Create context menu for each window
   window.webContents.on('context-menu', (event, params) => {
+    params['mute'] = window.webContents.isAudioMuted()
     createContextMenuForWindow(params).popup()
   })
   return window
@@ -117,6 +119,7 @@ function createPrefsWindow() {
     prefsWindow.show()
   } else {
     prefsWindow = new BrowserWindow({
+      maximizable: false,
       webPreferences: {
         webSecurity: true,
         tabbingIdentifier: "Prefs",
@@ -136,7 +139,6 @@ function createPrefsWindow() {
  */
 function createAppMenu() {
   let dev = settings.getSync('dev') || '0'
-  console.log(dev)
   let appMenu = new MenuItem({
     label: 'Facebook',
     submenu: [
@@ -178,6 +180,29 @@ function createAppMenu() {
         visible: true,
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
+        }
+      }),
+      new MenuItem({
+        label: 'Mute/Unmute Current Tab',
+        visible: true,
+        click: (menuItem, browserWindow, event) => {
+          if (browserWindow) browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
+        }
+      }),
+      new MenuItem({
+        label: 'Mute All Tabs',
+        visible: true,
+        click: (menuItem, browserWindow, event) => {
+          let browserWindows = BrowserWindow.getAllWindows()
+          if (browserWindows) browserWindows.forEach((browserWindow) => browserWindow.webContents.setAudioMuted(true))
+        }
+      }),
+      new MenuItem({
+        label: 'Unmute All Tabs',
+        visible: true,
+        click: (menuItem, browserWindow, event) => {
+          let browserWindows = BrowserWindow.getAllWindows()
+          if (browserWindows) browserWindows.forEach((browserWindow) => browserWindow.webContents.setAudioMuted(false))
         }
       }),
       new MenuItem({ type: 'separator' }),
@@ -273,10 +298,9 @@ function createAppMenu() {
  * @see createBrowserWindow
  * @see Electron.ContextMenuParams
  */
-function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, selectionText, srcURL, x, y }) {
+function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
   let menu = new Menu()
   let dev = settings.getSync('dev') || '0'
-  console.log(dev)
   // Link handlers, top priority
   menu.append(new MenuItem({
     label: 'Open Link in New Tab',
@@ -454,12 +478,20 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
       if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
     }
   }))
+  menu.append(new MenuItem({
+    label: mute ? 'Unmute' : 'Mute',
+    visible: true,
+    click: (menuItem, browserWindow, event) => {
+      let webContents = browserWindow.webContents
+      webContents.setAudioMuted(!webContents.isAudioMuted())
+    }
+  }))
 
 
   // Inspect elements (dev tools)
   menu.append(new MenuItem({ type: 'separator', visible: dev === '1' }))
   menu.append(new MenuItem({
-    label: 'Inspect elements',
+    label: 'Inspect element',
     visible: dev === '1',
     click: (menuItem, browserWindow, event) => {
       if (browserWindow) browserWindow.webContents.inspectElement(x, y)
@@ -475,7 +507,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
 function createTouchBarForWindow(window) {
   let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono == 1 ? '_mono' : ''}.png`)
   let resizeOptions = { width: 24, height: 24 }
-  let useMonoIcons = settings.getSync('mono-icons') || '0'
+  let useMonoIcons = settings.getSync('mono') || '0'
   window.setTouchBar(
     new TouchBar({
       items: [
