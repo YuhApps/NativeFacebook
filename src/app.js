@@ -10,9 +10,11 @@ const FACEBOOK = 'facebook'
 const MESSENGER = 'messenger'
 const INSTAGRAM = 'instagram'
 
+const MOBILE_USER_AGENT = 'Mozilla/5.0 (Android 9; Mobile; rv:68.0) Gecko/68.0 Firefox/68.0'
+
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 
-let mainWindow, prefsWindow
+let mainWindow, instagramMobileWindow, prefsWindow
 
 /** Basic Electron app events: */
 
@@ -43,11 +45,12 @@ app.on('window-all-closed', () => {
 /** Create a browser window, used to createMainWindow and create a tab
  * @param url: The URL for the tab. The URL for mainWindow is 'https://www.facebook.com'
  * @param bounds: Window bounds
+ * @param useMobileUserAgent: Request mobile website instead of the desktop version
  * @see createMainWindow
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, bounds) {
+function createBrowserWindow(url, bounds, useMobileUserAgent) {
   let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
   let window = new BrowserWindow({
     x: x,
@@ -62,7 +65,9 @@ function createBrowserWindow(url, bounds) {
       spellcheck: settings.getSync('spell') === '1' || false
     }
   })
-
+  if (useMobileUserAgent) {
+    window.webContents.setUserAgent(MOBILE_USER_AGENT)
+  }
   window.loadURL(url)
   createTouchBarForWindow(window)
 
@@ -131,6 +136,19 @@ function createPrefsWindow() {
     prefsWindow.loadFile('src/' + 'prefs.html')
   }
   prefsWindow.on('closed', () => prefsWindow = null)
+}
+
+/**
+ * Create the instagramMobileWindow
+ * @see instagramMobileWindow
+ */
+function createInstagramMobileWindow() {
+  if (instagramMobileWindow) {
+    instagramMobileWindow.show()
+  } else {
+    instagramMobileWindow = createBrowserWindow(INSTAGRAM_URL, { width: 480, height: 720 }, true)
+  }
+  instagramMobileWindow.on('closed', () => instagramMobileWindow = null)
 }
 
 /**
@@ -241,6 +259,12 @@ function createAppMenu() {
           } else {
             mainWindow = createBrowserWindow(INSTAGRAM_URL)
           }
+        },
+      }),
+      new MenuItem({
+        label: 'New Instagram Mobile Window',
+        click: (menuItem, browserWindow, event) => {
+          createInstagramMobileWindow()
         },
       }),
       new MenuItem({ type: 'separator' }),
