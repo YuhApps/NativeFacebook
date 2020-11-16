@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, shell, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, protocol, shell, TouchBar } = require('electron')
 const settings = require('electron-settings')
 const path = require('path')
 
@@ -34,7 +34,7 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   let acb = settings.getSync('acb') || '0'
   if (process.platform !== 'darwin' || acb === '1') {
-    app.quit()
+    app.hide()
   }
 })
 
@@ -81,9 +81,22 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
 
   // Create context menu for each window
   window.webContents.on('context-menu', (event, params) => {
-    params['mute'] = window.webContents.isAudioMuted()
+    params['mute'] = window && window.webContents.isAudioMuted()
     createContextMenuForWindow(params).popup()
   })
+
+  window.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
+    let menu = Menu.getApplicationMenu()
+    menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
+    menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+  }))
+
+  window.on('focus', () => {
+    let menu = Menu.getApplicationMenu()
+    menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
+    menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+  })
+
   return window
 }
 
@@ -130,10 +143,17 @@ function createPrefsWindow() {
         tabbingIdentifier: "Prefs",
         plugins: true,
         nodeIntegration: true,
-        enableRemoteModule: true
+        enableRemoteModule: true,
+        devTools: false
       }
     })
     prefsWindow.loadFile('src/' + 'prefs.html')
+    prefsWindow.on('close', () => {
+      let dev = settings.getSync('dev') || '0'
+      let menu = Menu.getApplicationMenu()
+      menu.getMenuItemById('dev-tools').visible = dev === '1'
+      menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
+    })
   }
   prefsWindow.on('closed', () => prefsWindow = null)
 }
@@ -149,6 +169,22 @@ function createInstagramMobileWindow() {
     instagramMobileWindow = createBrowserWindow(INSTAGRAM_URL, { width: 480, height: 720 }, true)
   }
   instagramMobileWindow.on('closed', () => instagramMobileWindow = null)
+}
+
+/**
+ * Return true if the selectionText param is a possible link
+ * All credits go to https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
+ * @param selectionText
+ * @returns {boolean}
+ */
+function isLink(selectionText) {
+  let pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+      '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+  return !!pattern.test(selectionText);
 }
 
 /**
@@ -180,6 +216,7 @@ function createAppMenu() {
     submenu: [
       new MenuItem({
         label: 'Go Back',
+        id: 'app-menu-go-back',
         accelerator: 'CmdOrCtrl+Left',
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.goBack()
@@ -187,6 +224,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Go Forward',
+        id: 'app-menu-go-forward',
         accelerator: 'CmdOrCtrl+Right',
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.goForward()
@@ -202,6 +240,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Mute/Unmute Current Tab',
+        id: 'app-menu-mute',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
@@ -270,18 +309,20 @@ function createAppMenu() {
       new MenuItem({ type: 'separator' }),
       new MenuItem({
         id: 'hide-on-mac-prefs',
+        visible: process.platform !== 'darwin',
         label: 'Preferences',
         click: createPrefsWindow
       }),
-      new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator' }),
+      new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator', visible: process.platform !== 'darwin', }),
       new MenuItem({
         label: 'Open Developer Tools',
+        id: 'dev-tools',
         visible: dev === '1',
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.openDevTools()
         }
       }),
-      new MenuItem({ type: 'separator', visible: dev === '1' }),
+      new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
       new MenuItem({ role: 'close' })
     ],
   })
@@ -305,14 +346,7 @@ function createAppMenu() {
 
   // Build app menu. On macOS, the 'Preferences' is placed in the Facebook menu (appMenu).
   // On Linux and Windows, it's placed in the 'File' menu instead.
-  let template
-  if (process.platform === 'darwin') {
-    // Hide the 'File/Preferences' menu item because it's already placed in the 'Facebook' menu.
-    file.submenu.items.find((item) => item.id && item.id.startsWith('hide-on-mac')).visible = false
-    template = [ appMenu, file, edit, window, help ]
-  } else {
-    template = [ file, edit, window, help ]
-  }
+  let template = process.platform === 'darwin' ? [ appMenu, file, edit, window, help ] : [ file, edit, window, help ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
@@ -327,15 +361,29 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
   let dev = settings.getSync('dev') || '0'
   // Link handlers, top priority
   menu.append(new MenuItem({
-    label: 'Open Link in New Tab',
-    visible: linkURL,
+    label: 'Open Link in New Foreground Tab',
+    visible: linkURL || isLink(selectionText),
     click: (menuItem, browserWindow, event) => {
-      if (browserWindow) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
+      if (browserWindow) {
+        if (linkURL) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
+        else browserWindow.addTabbedWindow(createBrowserWindow(selectionText.trim()))
+      }
+    }
+  }))
+  menu.append(new MenuItem({
+    label: 'Open Link in New Background Tab',
+    visible: linkURL || isLink(selectionText),
+    click: (menuItem, browserWindow, event) => {
+      if (browserWindow) {
+        if (linkURL) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
+        else browserWindow.addTabbedWindow(createBrowserWindow(selectionText.trim()))
+        browserWindow.focus()
+      }
     }
   }))
   menu.append(new MenuItem({
     label: 'Open Link in Browser',
-    visible: linkURL,
+    visible: linkURL || isLink(selectionText),
     click: (menuItem, browserWindow, event) => {
       shell.openExternal(linkURL)
     }
