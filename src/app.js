@@ -308,21 +308,11 @@ function createAppMenu() {
       }),
       new MenuItem({ type: 'separator' }),
       new MenuItem({
-        id: 'hide-on-mac-prefs',
         visible: process.platform !== 'darwin',
         label: 'Preferences',
         click: createPrefsWindow
       }),
-      new MenuItem({ id: 'hide-on-mac-prefs-sep', type: 'separator', visible: process.platform !== 'darwin', }),
-      new MenuItem({
-        label: 'Open Developer Tools',
-        id: 'dev-tools',
-        visible: dev === '1',
-        click: (menuItem, browserWindow, event) => {
-          if (browserWindow) browserWindow.webContents.openDevTools()
-        }
-      }),
-      new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
+      new MenuItem({ type: 'separator', visible: process.platform !== 'darwin', }),
       new MenuItem({ role: 'close' })
     ],
   })
@@ -330,8 +320,22 @@ function createAppMenu() {
   // Edit menu
   let edit = new MenuItem({ role: 'editMenu' })
 
+  // View menu
+  let view = new MenuItem({
+    label: 'View',
+    submenu: [
+      new MenuItem({ role: 'zoomIn' }),
+      new MenuItem({ role: 'zoomOut' }),
+      new MenuItem({ role: 'resetZoom' }),
+      new MenuItem({ type: 'separator' }),
+      new MenuItem({ role: 'togglefullscreen' }),
+      new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
+      new MenuItem({ id: 'dev-tools', role: 'toggleDevTools' }),
+    ]
+  })
+
   // Window menu
-  let window = new MenuItem({ role: 'windowMenu' })
+  let window = new MenuItem({role: 'windowMenu' })
 
   // Help menu
   let help = new MenuItem({
@@ -346,7 +350,7 @@ function createAppMenu() {
 
   // Build app menu. On macOS, the 'Preferences' is placed in the Facebook menu (appMenu).
   // On Linux and Windows, it's placed in the 'File' menu instead.
-  let template = process.platform === 'darwin' ? [ appMenu, file, edit, window, help ] : [ file, edit, window, help ]
+  let template = process.platform === 'darwin' ? [ appMenu, file, edit, view, window, help ] : [ file, edit, view, window, help ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
@@ -577,7 +581,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
-  let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono == 1 ? '_mono' : ''}.png`)
+  let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono === '1' ? '_mono' : ''}.png`)
   let resizeOptions = { width: 24, height: 24 }
   let useMonoIcons = settings.getSync('mono') || '0'
   window.setTouchBar(
