@@ -11,6 +11,24 @@ const MESSENGER = 'messenger'
 const INSTAGRAM = 'instagram'
 
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (Android 9; Mobile; rv:68.0) Gecko/68.0 Firefox/68.0'
+const PIP_JS_EXE =
+    `
+    if (document.pictureInPictureEnabled) {
+      let videos = document.querySelectorAll('video');
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+      } else {
+        for (let i = 0; i < videos.length; i++) {
+          let video = videos[i];
+          if (!video.paused) {
+            console.log(i);
+            video.requestPictureInPicture().then((res) => console.log(res)).catch((error) => console.log(error));
+            break;
+          }
+        }
+      }
+    }
+    `
 
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 
@@ -34,7 +52,11 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   let acb = settings.getSync('acb') || '0'
   if (process.platform !== 'darwin' || acb === '1') {
-    app.hide()
+    app.quit()
+  } else {
+    let menu = Menu.getApplicationMenu()
+    menu.getMenuItemById('app-menu-reload').enabled = false
+    menu.getMenuItemById('app-menu-copy-url').enabled = false
   }
 })
 
@@ -95,8 +117,9 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
     let menu = Menu.getApplicationMenu()
     menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
     menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+    menu.getMenuItemById('app-menu-reload').enabled = true
+    menu.getMenuItemById('app-menu-copy-url').enabled = true
   })
-
   return window
 }
 
@@ -150,7 +173,10 @@ function createPrefsWindow() {
     prefsWindow.loadFile('src/' + 'prefs.html')
     prefsWindow.on('close', () => {
       let dev = settings.getSync('dev') || '0'
+      let pip = settings.getSync('pip') || '0'
       let menu = Menu.getApplicationMenu()
+      menu.getMenuItemById('pip').visible = pip === '1'
+      menu.getMenuItemById('pip-sep').visible = pip === '1'
       menu.getMenuItemById('dev-tools').visible = dev === '1'
       menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
     })
@@ -178,12 +204,14 @@ function createInstagramMobileWindow() {
  * @returns {boolean}
  */
 function isLink(selectionText) {
-  let pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+  let pattern = new RegExp(
+      '^(https?:\\/\\/)?'+ // protocol
       '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
       '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
       '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
       '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
-      '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+      '(\\#[-a-z\\d_]*)?$','i' // fragment locator
+  );
   return !!pattern.test(selectionText);
 }
 
@@ -193,6 +221,7 @@ function isLink(selectionText) {
  */
 function createAppMenu() {
   let dev = settings.getSync('dev') || '0'
+  let pip = settings.getSync('pip') || '0'
   let appMenu = new MenuItem({
     label: 'Facebook',
     submenu: [
@@ -230,9 +259,10 @@ function createAppMenu() {
           if (browserWindow) browserWindow.webContents.goForward()
         }
       }),
-      new MenuItem({ label: 'Reload', role: 'reload' }),
+      new MenuItem({ label: 'Reload', id: 'app-menu-reload', role: 'reload' }),
       new MenuItem({
         label: 'Copy Current page URL',
+        id: 'app-menu-copy-url',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
@@ -244,6 +274,20 @@ function createAppMenu() {
         visible: true,
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
+        }
+      }),
+      new MenuItem({
+        label: 'Mute Website',
+        visible: true,
+        click: (menuItem, browserWindow, event) => {
+          let browserWindows = BrowserWindow.getAllWindows()
+          if (browserWindow && browserWindows) {
+            browserWindow.webContents.executeJavaScript('window.location.origin')
+              .then((origin) => {
+                browserWindows.forEach((window) =>
+                    window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
+              })
+          }
         }
       }),
       new MenuItem({
@@ -329,6 +373,17 @@ function createAppMenu() {
       new MenuItem({ role: 'resetZoom' }),
       new MenuItem({ type: 'separator' }),
       new MenuItem({ role: 'togglefullscreen' }),
+      new MenuItem({ type: 'separator', visible: pip === '1', id: 'pip-sep' }),
+      new MenuItem({
+        label: 'Toggle Picture in Picture',
+        id: 'pip',
+        visible: pip === '1',
+        click: (menuItem, browserWindow, event) => {
+          if (browserWindow) {
+            browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+          }
+        }
+      }),
       new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
       new MenuItem({ id: 'dev-tools', role: 'toggleDevTools' }),
     ]
@@ -363,7 +418,7 @@ function createAppMenu() {
 function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
   let menu = new Menu()
   let dev = settings.getSync('dev') || '0'
-  // Link handlers, top priority
+  // Link handlers
   menu.append(new MenuItem({
     label: 'Open Link in New Foreground Tab',
     visible: linkURL || isLink(selectionText),

@@ -24,7 +24,6 @@
 
     <div class="pref mac">
       <p class="pref-title">Use mono icons on Touch Bar (require restart):</p>
-      <!-- acb: App close behavior -->
       <input type="radio" id="mono-icons-off" name="mono" value="0" checked>
       <label for="mono-icons-off">No</label><br>
       <input type="radio" id="mono-icons-on" name="mono" value="1">
@@ -34,7 +33,6 @@
     <!-- Open Messenger on launch -->
     <div class="pref">
       <p class="pref-title">Open Messenger on launch:</p>
-      <!-- acb: App close behavior -->
       <input type="radio" id="msg-off" name="msg" value="0" checked>
       <label for="msg-off">No</label><br>
       <input type="radio" id="msg-on" name="msg" value="1">
@@ -44,7 +42,6 @@
     <!-- Open Instagram on launch -->
     <div class="pref">
       <p class="pref-title">Open Instagram on launch:</p>
-      <!-- acb: App close behavior -->
       <input type="radio" id="ins-off" name="ins" value="0" checked>
       <label for="ins-off">No</label><br>
       <input type="radio" id="ins-on" name="ins" value="1">
@@ -54,7 +51,6 @@
     <!-- Spell check -->
     <div class="pref">
       <p class="pref-title">Spell check:</p>
-      <!-- acb: App close behavior -->
       <input type="radio" id="spell-off" name="spell" value="0" checked>
       <label for="spell-off">No</label><br>
       <input type="radio" id="spell-on" name="spell" value="1">
@@ -64,11 +60,20 @@
     <!-- Dev mode on launch -->
     <div class="pref">
       <p class="pref-title">Developer mode:</p>
-      <!-- acb: App close behavior -->
       <input type="radio" id="dev-off" name="dev" value="0" checked>
       <label for="dev-off">No</label><br>
       <input type="radio" id="dev-on" name="dev" value="1">
       <label for="dev-on">Yes</label><br>
+    </div>
+
+    <!-- Picture in Picture (Buggy due to Facebook's code, web dev standards and Chromium -->
+    <div class="pref">
+      <p class="pref-title">Picture in Picture:</p>
+      <input type="radio" id="pip-off" name="pip" value="0" checked>
+      <label for="pip-off">No</label><br>
+      <input type="radio" id="pip-on" name="pip" value="1">
+      <label for="pip-on">Yes</label><br>
+      <p class="pref-subtitle">PiP is buggy due to Web development standards and Chromium base.</p>
     </div>
 
   </div>

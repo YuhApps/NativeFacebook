@@ -57,3 +57,8 @@ ul {
   font-size: 16px;
   font-weight: bold;
 }
+
+.pref-subtitle {
+  color: grey;
+  font-size: 16px;
+}
