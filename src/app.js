@@ -55,8 +55,12 @@ app.on('window-all-closed', () => {
     app.quit()
   } else {
     let menu = Menu.getApplicationMenu()
+    menu.getMenuItemById('app-menu-go-back').enabled = false
+    menu.getMenuItemById('app-menu-go-forward').enabled = false
     menu.getMenuItemById('app-menu-reload').enabled = false
     menu.getMenuItemById('app-menu-copy-url').enabled = false
+    menu.getMenuItemById('app-menu-mute-tab').enabled = false
+    menu.getMenuItemById('app-menu-mute-website').enabled = false
   }
 })
 
@@ -119,6 +123,8 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
     menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
     menu.getMenuItemById('app-menu-reload').enabled = true
     menu.getMenuItemById('app-menu-copy-url').enabled = true
+    menu.getMenuItemById('app-menu-mute-tab').enabled = true
+    menu.getMenuItemById('app-menu-mute-website').enabled = true
   })
   return window
 }
@@ -270,7 +276,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Mute/Unmute Current Tab',
-        id: 'app-menu-mute',
+        id: 'app-menu-mute-tab',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           if (browserWindow) browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
@@ -278,6 +284,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Mute Website',
+        id: 'app-menu-mute-website',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           let browserWindows = BrowserWindow.getAllWindows()
