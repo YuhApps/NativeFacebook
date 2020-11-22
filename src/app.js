@@ -1,6 +1,7 @@
-const { app, BrowserWindow, clipboard, Menu, MenuItem, nativeImage, protocol, shell, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, protocol, shell, TouchBar } = require('electron')
 const settings = require('electron-settings')
 const path = require('path')
+const validUrlUtf8 = require('valid-url-utf8')
 
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
@@ -14,15 +15,21 @@ const MOBILE_USER_AGENT = 'Mozilla/5.0 (Android 9; Mobile; rv:68.0) Gecko/68.0 F
 const PIP_JS_EXE =
     `
     if (document.pictureInPictureEnabled) {
-      let videos = document.querySelectorAll('video');
       if (document.pictureInPictureElement) {
         document.exitPictureInPicture();
       } else {
+        let videos = document.querySelectorAll('video');
         for (let i = 0; i < videos.length; i++) {
           let video = videos[i];
           if (!video.paused) {
             console.log(i);
-            video.requestPictureInPicture().then((res) => console.log(res)).catch((error) => console.log(error));
+            video.requestPictureInPicture().then((res) => {
+              video.setAttribute('__pip__', true);
+              video.addEventListener('leavepictureinpicture', (e) => {
+                video.removeAttribute('__pip__');
+              })
+              console.log(res);
+            }).catch((error) => console.log(error));
             break;
           }
         }
@@ -49,7 +56,14 @@ app.on('activate', () => {
   }
 })
 
+/*
+app.on('before-quit', (event) => {
+  app.exit(0)
+})
+*/
+
 app.on('window-all-closed', () => {
+  console.log('window-all-closed')
   let acb = settings.getSync('acb') || '0'
   if (process.platform !== 'darwin' || acb === '1') {
     app.quit()
@@ -61,6 +75,8 @@ app.on('window-all-closed', () => {
     menu.getMenuItemById('app-menu-copy-url').enabled = false
     menu.getMenuItemById('app-menu-mute-tab').enabled = false
     menu.getMenuItemById('app-menu-mute-website').enabled = false
+    menu.getMenuItemById('app-menu-mute-tabs').enabled = false
+    menu.getMenuItemById('app-menu-unmute-tabs').enabled = false
   }
 })
 
@@ -125,7 +141,20 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
     menu.getMenuItemById('app-menu-copy-url').enabled = true
     menu.getMenuItemById('app-menu-mute-tab').enabled = true
     menu.getMenuItemById('app-menu-mute-website').enabled = true
+    menu.getMenuItemById('app-menu-mute-tabs').enabled = true
+    menu.getMenuItemById('app-menu-unmute-tabs').enabled = true
   })
+
+  /*
+  window.on('close', (event) => {
+    let windows = BrowserWindow.getAllWindows()
+    if ((window === mainWindow) && windows.length === 1) {
+      event.preventDefault()
+      window.hide()
+    }
+  })
+   */
+
   return window
 }
 
@@ -206,19 +235,11 @@ function createInstagramMobileWindow() {
 /**
  * Return true if the selectionText param is a possible link
  * All credits go to https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
- * @param selectionText
+ * @param text
  * @returns {boolean}
  */
-function isLink(selectionText) {
-  let pattern = new RegExp(
-      '^(https?:\\/\\/)?'+ // protocol
-      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
-      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
-      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
-      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
-      '(\\#[-a-z\\d_]*)?$','i' // fragment locator
-  );
-  return !!pattern.test(selectionText);
+function isLink(text) {
+  return validUrlUtf8(text)
 }
 
 /**
@@ -299,6 +320,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Mute All Tabs',
+        id: 'app-menu-mute-tabs',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           let browserWindows = BrowserWindow.getAllWindows()
@@ -307,6 +329,7 @@ function createAppMenu() {
       }),
       new MenuItem({
         label: 'Unmute All Tabs',
+        id: 'app-menu-unmute-tabs',
         visible: true,
         click: (menuItem, browserWindow, event) => {
           let browserWindows = BrowserWindow.getAllWindows()
@@ -355,6 +378,21 @@ function createAppMenu() {
         label: 'New Instagram Mobile Window',
         click: (menuItem, browserWindow, event) => {
           createInstagramMobileWindow()
+        },
+      }),
+      new MenuItem({ type: 'separator' }),
+      new MenuItem({
+        label: 'New Tab from Clipboard',
+        click: (menuItem, browserWindow, event) => {
+          let text = clipboard.readText().trim()
+          console.log(text)
+          if (!isLink(text)) {
+            dialog.showErrorBox('Invalid URL', 'Either your clipboard is empty or the copied item is not a valid URL.')
+          } else if (mainWindow.isDestroyed()) {
+            createMainWindow(text)
+          } else {
+            mainWindow.addTabbedWindow(createBrowserWindow(text))
+          }
         },
       }),
       new MenuItem({ type: 'separator' }),
@@ -425,17 +463,8 @@ function createAppMenu() {
 function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
   let menu = new Menu()
   let dev = settings.getSync('dev') || '0'
+  console.log(isLink(selectionText))
   // Link handlers
-  menu.append(new MenuItem({
-    label: 'Open Link in New Foreground Tab',
-    visible: linkURL || isLink(selectionText),
-    click: (menuItem, browserWindow, event) => {
-      if (browserWindow) {
-        if (linkURL) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
-        else browserWindow.addTabbedWindow(createBrowserWindow(selectionText.trim()))
-      }
-    }
-  }))
   menu.append(new MenuItem({
     label: 'Open Link in New Background Tab',
     visible: linkURL || isLink(selectionText),
@@ -444,6 +473,16 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
         if (linkURL) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
         else browserWindow.addTabbedWindow(createBrowserWindow(selectionText.trim()))
         browserWindow.focus()
+      }
+    }
+  }))
+  menu.append(new MenuItem({
+    label: 'Open Link in New Foreground Tab',
+    visible: linkURL || isLink(selectionText),
+    click: (menuItem, browserWindow, event) => {
+      if (browserWindow) {
+        if (linkURL) browserWindow.addTabbedWindow(createBrowserWindow(linkURL))
+        else browserWindow.addTabbedWindow(createBrowserWindow(selectionText.trim()))
       }
     }
   }))
@@ -633,6 +672,13 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     visible: dev === '1',
     click: (menuItem, browserWindow, event) => {
       if (browserWindow) browserWindow.webContents.inspectElement(x, y)
+    }
+  }))
+  menu.append(new MenuItem({
+    label: 'Open Developer Console',
+    visible: dev === '1',
+    click: (menuItem, browserWindow, event) => {
+      if (browserWindow) browserWindow.webContents.openDevTools()
     }
   }))
 

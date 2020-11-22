@@ -20,7 +20,8 @@
     }
   },
   "dependencies": {
-    "electron-settings": "^4.0.2"
+    "electron-settings": "^4.0.2",
+    "valid-url-utf8": "^1.0.7"
   },
   "devDependencies": {
     "electron": "10.1.5",
