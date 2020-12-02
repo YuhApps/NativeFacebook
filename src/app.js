@@ -46,6 +46,7 @@ let mainWindow, instagramMobileWindow, prefsWindow
 app.whenReady().then(() => {
   createMainWindow()
   createAppMenu()
+  createDockActions()
 })
 
 app.on('activate', () => {
@@ -686,17 +687,65 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
 }
 
 /**
+ * Create Dock actions on macOS
+ */
+function createDockActions() {
+  if (process.platform === 'darwin') {
+    let template = [
+      new MenuItem({
+        label: 'New Facebook Tab',
+        click: (menuItem, browserWindow, event) => {
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(FACEBOOK_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
+          } else {
+            mainWindow = createBrowserWindow(FACEBOOK_URL)
+          }
+        },
+      }),
+      new MenuItem({
+        label: 'New Messenger Tab',
+        click: (menuItem, browserWindow, event) => {
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(MESSENGER_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
+          } else {
+            let bounds = settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
+            mainWindow = createBrowserWindow(MESSENGER_URL, bounds)
+          }
+        },
+      }),
+      new MenuItem({
+        label: 'New Instagram Tab',
+        click: (menuItem, browserWindow, event) => {
+          if (mainWindow.isDestroyed()) {
+            createMainWindow(INSTAGRAM_URL)
+          } else if (browserWindow) {
+            browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
+          } else {
+            mainWindow = createBrowserWindow(INSTAGRAM_URL)
+          }
+        },
+      })
+    ]
+    app.dock.setMenu(Menu.buildFromTemplate(template))
+  }
+}
+
+/**
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
-  let resolvePath = (name, mono) => path.join(__dirname, `/assets/${name}${mono === '1' ? '_mono' : ''}.png`)
+  if (process.platform !== 'darwin') return
+  let resolvePath = (name) => path.join(__dirname, `/assets/${name}_mono.png`)
   let resizeOptions = { width: 24, height: 24 }
-  let useMonoIcons = settings.getSync('mono') || '0'
   window.setTouchBar(
     new TouchBar({
       items: [
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath(FACEBOOK, useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(FACEBOOK)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -707,7 +756,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath(MESSENGER, useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(MESSENGER)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {
@@ -718,7 +767,7 @@ function createTouchBarForWindow(window) {
           }
         }),
         new TouchBar.TouchBarButton({
-          icon: nativeImage.createFromPath(resolvePath(INSTAGRAM, useMonoIcons)).resize(resizeOptions),
+          icon: nativeImage.createFromPath(resolvePath(INSTAGRAM)).resize(resizeOptions),
           click: () => {
             let browserWindow = BrowserWindow.getFocusedWindow()
             if (browserWindow) {

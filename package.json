@@ -15,7 +15,7 @@
     ],
     "mac": {
       "asar": true,
-      "category": "Social",
+      "category": "public.app-category.social-networking",
       "target": "zip"
     }
   },
