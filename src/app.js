@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, protocol, shell, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, Notification, protocol, shell, TouchBar } = require('electron')
 const settings = require('electron-settings')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
@@ -64,7 +64,6 @@ app.on('before-quit', (event) => {
 */
 
 app.on('window-all-closed', () => {
-  console.log('window-all-closed')
   let acb = settings.getSync('acb') || '0'
   if (process.platform !== 'darwin' || acb === '1') {
     app.quit()
@@ -155,6 +154,12 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
     }
   })
    */
+
+  window.webContents.session.on('will-download', (event, item, webContents) => {
+    let downloads = settings.getSync('downloads')
+    if (!downloads) settings.setSync('downloads', [])
+    downloads.unshift(item)
+  })
 
   return window
 }
@@ -386,7 +391,6 @@ function createAppMenu() {
         label: 'New Tab from Clipboard',
         click: (menuItem, browserWindow, event) => {
           let text = clipboard.readText().trim()
-          console.log(text)
           if (!isLink(text)) {
             dialog.showErrorBox('Invalid URL', 'Either your clipboard is empty or the copied item is not a valid URL.')
           } else if (mainWindow.isDestroyed()) {
@@ -464,7 +468,6 @@ function createAppMenu() {
 function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
   let menu = new Menu()
   let dev = settings.getSync('dev') || '0'
-  console.log(isLink(selectionText))
   // Link handlers
   menu.append(new MenuItem({
     label: 'Open Link in New Background Tab',
@@ -540,6 +543,16 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
   }))
 
   // Image handlers, only displays with <img>
+  menu.append(new MenuItem({
+    label: 'Open Image in New Tab',
+    visible: mediaType === 'image',
+    click: (menuItem, browserWindow, event) => {
+      if (browserWindow && browserWindow) {
+        let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
+        browserWindow.addTabbedWindow(createBrowserWindow(url))
+      }
+    }
+  }))
   menu.append(new MenuItem({
     label: 'Copy Image address',
     visible: mediaType === 'image',

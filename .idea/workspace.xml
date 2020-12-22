@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="8c5afb12-0565-4b74-b8f6-f15f09f4c421" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app.js" afterDir="false" />
     </list>
@@ -23,6 +24,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="dart.analysis.tool.window.visible" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
@@ -111,6 +113,11 @@
       <workItem from="1606255206485" duration="626000" />
       <workItem from="1606329813150" duration="131000" />
       <workItem from="1606385558863" duration="15000" />
+      <workItem from="1606933978448" duration="618000" />
+      <workItem from="1606935742620" duration="17000" />
+      <workItem from="1607004326799" duration="388000" />
+      <workItem from="1608174049625" duration="1762000" />
+      <workItem from="1608606531104" duration="884000" />
     </task>
     <servers />
   </component>
