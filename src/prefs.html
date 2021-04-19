@@ -22,6 +22,15 @@
       <label for="acb-quit">Force quit (cold launch)</label>
     </div>
 
+    <!-- Check Camera and Microphone permissions -->
+    <div class="pref">
+      <p class="pref-title">Check Camera and Microphone permissions on launch:</p>
+      <input type="radio" id="cam-mic-off" name="cam_mic" value="0" checked>
+      <label for="cam-mic-off">No</label><br>
+      <input type="radio" id="cam-mic-on" name="cam_mic" value="1">
+      <label for="cam-mic-on">Yes</label><br>
+    </div>
+
     <!-- Open Messenger on launch -->
     <div class="pref">
       <p class="pref-title">Open Messenger on launch:</p>
@@ -85,7 +94,7 @@
     radios.forEach((radio) => {
       radio.checked = (settings.getSync(radio.name) || '0') === radio.value
       radio.addEventListener('change', () => {
-        settings.set(radio.name, radio.value)
+        settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
       })
     })
   </script>

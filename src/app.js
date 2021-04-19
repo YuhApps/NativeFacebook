@@ -1,5 +1,7 @@
-const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, Notification, protocol, shell, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, protocol, shell, systemPreferences, TouchBar } = require('electron')
+const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
+const { platform } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
 
@@ -44,6 +46,7 @@ let mainWindow, instagramMobileWindow, prefsWindow
 /** Basic Electron app events: */
 
 app.whenReady().then(() => {
+  requestCameraAndMicrophonePermissions()
   createMainWindow()
   createAppMenu()
   createDockActions()
@@ -57,13 +60,24 @@ app.on('activate', () => {
   }
 })
 
-/*
-app.on('before-quit', (event) => {
-  app.exit(0)
+app.on('open-url', (event, url) => {
+  createBrowserWindow(url, DEFAULT_WINDOW_BOUNDS)
 })
-*/
+
+// https://www.electronjs.org/docs/api/app#appsetaboutpaneloptionsoptions
+app.setAboutPanelOptions({
+  applicationName: 'Facebook (unofficial)',
+  applicationVersion: '1.0.2',
+  copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook. All right reserved.',
+  version: '20210418'
+})
+
+app.on('before-quit', (event) => {
+  askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient())
+})
 
 app.on('window-all-closed', () => {
+  askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient())
   let acb = settings.getSync('acb') || '0'
   if (process.platform !== 'darwin' || acb === '1') {
     app.quit()
@@ -83,6 +97,67 @@ app.on('window-all-closed', () => {
 /** End of Basic Electron app events. */
 
 /**************************************/
+
+function requestCameraAndMicrophonePermissions() {
+  let cam_mic = settings.getSync('cam_mic', 1)
+  if (cam_mic === 0) return
+  Promise.all([systemPreferences.getMediaAccessStatus("camera"), systemPreferences.getMediaAccessStatus("microphone")])
+      .then(async ([cam, mic]) => {
+        console.log(cam, mic)
+        if (cam !== 'granted' || mic !== 'granted') {
+          const { response } = await dialog.showMessageBox({
+            defaultId: 1,
+            message: 'Camera and Microphone permissions',
+            detail: 'In order to allow livestreaming, Native Facebook requires access to Camera and Microphone. Please open System Preferences, ' +
+              'click on Security & Privacy, select the Privacy tab, and give Native Facebook access to Camera and Microphone. If you do not ' +
+              'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
+            buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
+          })
+          if (response === 2) {
+            settings.setSync('cam_mic', 0)
+          } else if (response === 1) {
+            shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?privacy`)
+          }
+        }
+      })
+      .catch((error) => console.log(error))
+}
+
+function isDefaultHttpProtocolClient() {
+  return app.isDefaultProtocolClient('http') || app.isDefaultProtocolClient('https')
+}
+
+function requestToBeTheDefaultBrowser() {
+  dialog.showMessageBox({
+    id: 0,
+    message: 'Temporarily set Facebook as the default browser',
+    detail: 'You can temporarily set Facebook as the default browser to handle Facebook sign in and share processes from other apps. ' +
+            'After that, you are recommended to switch back to your favourite browser. This Facebook app is only made to work with Facebook websites. ' +
+            'Therefore, it should not be used or treated like a normal web browser.',
+    buttons: ['Proceed', 'Cancel']
+  }).then(({ response }) => {
+    if (response === 0) {
+      app.setAsDefaultProtocolClient('http')
+      app.setAsDefaultProtocolClient('https')
+    }
+  })
+}
+
+function askRevertToTheDefaultBrowser(show) {
+  if (show) {
+    let detail = platform === 'darwin' ? 'Open System Preferences, click General and set your favourite browser as the default one.' 
+               : platform === 'win32'  ? 'Open Settings, and select System/Apps, then Default Apps, and select your favourite browser under Web browser section.'
+               : 'Open Settings or System Preferences depending on your DE, and search for Default apps, then set your favourite browser as the default one.'
+    dialog.showMessageBox({
+      id: 0,
+      message: 'Facebook is still your default browser',
+      detail: detail + ' Facebook should not remain as the default browser.',
+      buttons: ['Open System Preferences', 'Cancel']
+    }).then(({ response }) => {
+      if (response === 0) shell.openExternal(`x-apple.systempreferences:com.apple.preference.general`)
+    })
+  }
+}
 
 /** Create a browser window, used to createMainWindow and create a tab
  * @param url: The URL for the tab. The URL for mainWindow is 'https://www.facebook.com'
@@ -105,20 +180,20 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
       webSecurity: true,
       plugins: true,
       spellcheck: settings.getSync('spell') === '1' || false
-    }
+    },
   })
   if (useMobileUserAgent) {
     window.webContents.setUserAgent(MOBILE_USER_AGENT)
   }
   window.loadURL(url)
+  setuPushReceiver(window.webContents)
   createTouchBarForWindow(window)
 
   // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
   // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
   window.webContents.on('new-window', (event, url) => {
     event.preventDefault()
-    let focusedWindow = BrowserWindow.getFocusedWindow()
-    focusedWindow.addTabbedWindow(createBrowserWindow(url))
+    window.addTabbedWindow(createBrowserWindow(url))
   })
 
   // Create context menu for each window
@@ -174,6 +249,7 @@ function createMainWindow(url) {
   mainWindow.on('ready-to-show', () => {
     let ins = settings.getSync('ins') || '0'
     let msg = settings.getSync('msg') || '0'
+    console.log(ins, msg)
     if (ins === '1') {
       let focusedWindow = BrowserWindow.getFocusedWindow()
       focusedWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
@@ -208,7 +284,8 @@ function createPrefsWindow() {
         plugins: true,
         nodeIntegration: true,
         enableRemoteModule: true,
-        devTools: false
+        devTools: true,
+        contextIsolation: false
       }
     })
     prefsWindow.loadFile('src/' + 'prefs.html')
@@ -264,6 +341,19 @@ function createAppMenu() {
         label: 'Preferences',
         accelerator: 'Cmd+,',
         click: createPrefsWindow,
+      }),
+      new MenuItem({ type: 'separator' }),
+      new MenuItem({
+        label: 'Set default browser',
+        accelerator: 'Cmd+Option+F',
+        click: (menuItem, browserWindow, event) => {
+          let checked = isDefaultHttpProtocolClient()
+          if (checked) {
+            askRevertToTheDefaultBrowser(checked)
+          } else {
+            requestToBeTheDefaultBrowser()
+          }
+        }
       }),
       new MenuItem({ type: 'separator' }),
       new MenuItem({ role: 'services' }),
@@ -405,6 +495,19 @@ function createAppMenu() {
         visible: process.platform !== 'darwin',
         label: 'Preferences',
         click: createPrefsWindow
+      }),
+      new MenuItem({
+        visible: process.platform !== 'darwin',
+        label: 'Set default browser',
+        accelerator: 'Cmd+Option+F',
+        click: (menuItem, browserWindow, event) => {
+          let checked = isDefaultHttpProtocolClient()
+          if (checked) {
+            askRevertToTheDefaultBrowser(checked)
+          } else {
+            requestToBeTheDefaultBrowser()
+          }
+        }
       }),
       new MenuItem({ type: 'separator', visible: process.platform !== 'darwin', }),
       new MenuItem({ role: 'close' })
@@ -574,6 +677,14 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     click: (menuItem, browserWindow, event) => {
       let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
       browserWindow.webContents.downloadURL(url)
+    }
+  }))
+  menu.append(new MenuItem({
+    label: 'Download video',
+    visible: mediaType === 'video',
+    click: (menuItem, browserWindow, event) => {
+      let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
+      console.log(url)
     }
   }))
 

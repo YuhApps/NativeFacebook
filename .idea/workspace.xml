@@ -3,9 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="8c5afb12-0565-4b74-b8f6-f15f09f4c421" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/prefs.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/prefs.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,6 +18,9 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1joHqycMFE8eh6cdirzLdL5Zu2Q" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -33,11 +38,21 @@
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="settings.editor.selected.configurable" value="preferences.customizations" />
-    <property name="ts.external.directory.path" value="$APPLICATION_HOME_DIR$/plugins/JavaScriptLanguage/jsLanguageServicesImpl/external" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="ts.external.directory.path" value="$PROJECT_DIR$/node_modules/typescript/lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="npm.pack">
+    <configuration name="pack" type="js.build_tools.npm" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="pack" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
     <configuration name="start" type="js.build_tools.npm" nameIsGenerated="true">
       <package-json value="$PROJECT_DIR$/package.json" />
       <command value="run" />
@@ -118,6 +133,23 @@
       <workItem from="1607004326799" duration="388000" />
       <workItem from="1608174049625" duration="1762000" />
       <workItem from="1608606531104" duration="884000" />
+      <workItem from="1608609021810" duration="188000" />
+      <workItem from="1609319989110" duration="159000" />
+      <workItem from="1609732602260" duration="20000" />
+      <workItem from="1616651596571" duration="673000" />
+      <workItem from="1616652417977" duration="2018000" />
+      <workItem from="1616675726952" duration="957000" />
+      <workItem from="1616676927214" duration="281000" />
+      <workItem from="1616678095710" duration="1726000" />
+      <workItem from="1616694853382" duration="1773000" />
+      <workItem from="1616697196937" duration="14000" />
+      <workItem from="1617048952893" duration="370000" />
+      <workItem from="1617200436935" duration="385000" />
+      <workItem from="1617217807922" duration="271000" />
+      <workItem from="1617230138760" duration="42000" />
+      <workItem from="1617287424475" duration="1159000" />
+      <workItem from="1617643999131" duration="346000" />
+      <workItem from="1617666115755" duration="274000" />
     </task>
     <servers />
   </component>
