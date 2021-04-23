@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, protocol, shell, systemPreferences, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, shell, systemPreferences, TouchBar } = require('electron')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
@@ -145,17 +145,46 @@ function requestToBeTheDefaultBrowser() {
 
 function askRevertToTheDefaultBrowser(show) {
   if (show) {
-    let detail = platform === 'darwin' ? 'Open System Preferences, click General and set your favourite browser as the default one.' 
-               : platform === 'win32'  ? 'Open Settings, and select System/Apps, then Default Apps, and select your favourite browser under Web browser section.'
-               : 'Open Settings or System Preferences depending on your DE, and search for Default apps, then set your favourite browser as the default one.'
-    dialog.showMessageBox({
-      id: 0,
-      message: 'Facebook is still your default browser',
-      detail: detail + ' Facebook should not remain as the default browser.',
-      buttons: ['Open System Preferences', 'Cancel']
-    }).then(({ response }) => {
-      if (response === 0) shell.openExternal(`x-apple.systempreferences:com.apple.preference.general`)
-    })
+    if (platform === 'darwin') {
+      dialog.showMessageBox({
+        id: 0,
+        message: 'Facebook is still your default browser',
+        detail: 'Open System Preferences, click General and set your favourite browser as the default one. Facebook should not remain as the default browser.',
+        buttons: ['Open System Preferences', 'Use Safari', 'Cancel']
+      }).then(({ response }) => {
+        if (response === 0) {
+          let url = 'x-apple.systempreferences:com.apple.preference.general'
+          shell.openExternal(url)
+        } else if (response == 1) {
+          app.removeAsDefaultProtocolClient('http')
+          app.removeAsDefaultProtocolClient('https')
+        }
+      })
+    } else if (platform === 'win32') {
+      dialog.showMessageBox({
+        id: 0,
+        message: 'Facebook is still your default browser',
+        detail: 'Open Settings, and select System/Apps, then Default Apps, and select your favourite browser under Web browser section. Facebook should not remain as the default browser.',
+        buttons: ['Open Settings', 'Cancel']
+      }).then(({ response }) => {
+        if (response === 0) {
+          let url = 'ms-settings:defaultapps'
+          shell.openExternal(url)
+        }
+      })
+    } else { // linux
+      dialog.showMessageBox({
+        id: 0,
+        message: 'Facebook is still your default browser',
+        detail: 'Open System Settings, and search for Default apps, then set your favourite browser as the default one. Facebook should not remain as the default browser.',
+        buttons: ['OK', 'Cancel']
+      }).then(({ response }) => {
+        if (response === 0) {
+          app.removeAsDefaultProtocolClient('http')
+          app.removeAsDefaultProtocolClient('https')
+        }
+      })
+    }
   }
 }
 
