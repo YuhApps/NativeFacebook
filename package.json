@@ -1,6 +1,6 @@
 {
   "name": "Facebook",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "A Facebook client for macOS and Linux",
   "main": "src/app.js",
   "scripts": {

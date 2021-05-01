@@ -3,6 +3,7 @@ const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
 const path = require('path')
+const { crash } = require('process')
 const validUrlUtf8 = require('valid-url-utf8')
 
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -41,13 +42,14 @@ const PIP_JS_EXE =
 
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 
-let mainWindow, instagramMobileWindow, prefsWindow
+let aboutWindow, mainWindow, instagramMobileWindow, prefsWindow
 
 /** Basic Electron app events: */
 
 app.whenReady().then(() => {
   requestCameraAndMicrophonePermissions()
   createMainWindow()
+  // createAboutWindow()
   createAppMenu()
   createDockActions()
 })
@@ -68,7 +70,9 @@ app.on('open-url', (event, url) => {
 app.setAboutPanelOptions({
   applicationName: 'Facebook (unofficial)',
   applicationVersion: '1.0.2',
-  copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook. All right reserved.',
+  copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook.\n' +
+             '"Facebook" is a registered trademark of Facebook, Inc.\n' + 
+             'All right reserved.',
   version: '20210418'
 })
 
@@ -297,6 +301,33 @@ function createMainWindow(url) {
   })
 }
 
+function createAboutWindow() {
+  if (aboutWindow) {
+    aboutWindow.show()
+  } else {
+    aboutWindow = new BrowserWindow({
+      height: 240,
+      width: 720,
+      center: false,
+      alwaysOnTop: true,
+      frame: false,
+      maximizable: false,
+      minimizable: false,
+      resizable: false,
+      titleBarStyle: 'hidden',
+      useContentSize: true,
+      webPreferences: {
+        contextIsolation: false,
+        enableRemoteModule: true,
+        nodeIntegration: true,
+        devTools: true
+      }
+    })
+    aboutWindow.loadFile('src/about.html')
+    aboutWindow.on('close', () => aboutWindow = null)
+  }
+}
+
 /**
  * Create the prefsWindow
  * @see prefsWindow
@@ -306,7 +337,10 @@ function createPrefsWindow() {
     prefsWindow.show()
   } else {
     prefsWindow = new BrowserWindow({
+      alwaysOnTop: true,
+      frame: false,
       maximizable: false,
+      titleBarStyle: 'hidden',
       webPreferences: {
         webSecurity: true,
         tabbingIdentifier: "Prefs",
@@ -315,9 +349,9 @@ function createPrefsWindow() {
         enableRemoteModule: true,
         devTools: true,
         contextIsolation: false
-      }
+      },
     })
-    prefsWindow.loadFile('src/' + 'prefs.html')
+    prefsWindow.loadFile('src/prefs.html')
     prefsWindow.on('close', () => {
       let dev = settings.getSync('dev') || '0'
       let pip = settings.getSync('pip') || '0'
@@ -364,7 +398,11 @@ function createAppMenu() {
   let appMenu = new MenuItem({
     label: 'Facebook',
     submenu: [
-      new MenuItem({ role: 'about' }),
+      new MenuItem({
+        label: 'About Facebook',
+        click: createAboutWindow,
+        // role: 'about'
+      }),
       new MenuItem({type: 'separator' }),
       new MenuItem({
         label: 'Preferences',

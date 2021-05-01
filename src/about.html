@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Facebook</title>
+  <style>
+      body {
+        font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+        height: 100%;
+        margin: 0;
+        padding: 20px;
+        user-select: none;
+        --fb-color: #1a77f2;
+      }
+      h1, h2, h3, h4, h5, h6, strong {
+        color: var(--fb-color);
+      }
+      #wrapper {
+        display: flex;
+        flex-direction: row;
+        vertical-align: middle;
+      }
+      #wrapper img {
+        align-self: center;
+        height: 160px;
+        margin-right: 20px;
+        vertical-align: middle;
+      }
+      #wrapper div {
+        vertical-align: middle;
+      }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <img src="assets/facebook.png" alt="Facebook logo">
+    <div>
+        <h3>Facebook (unofficial)</h3>
+        <p>Version <span></span></p>
+        <p>Developed by <strong>YUH APPS</strong>. Made with <strong>Electron by GitHub</strong>. "Facebook" is a registered trademark of Facebook, Inc.</p>
+        <p>© 2021 YUH APPS. All rights reserved.</p>
+    </div>
+  </div>
+  <script>
+    let { app } = require('electron').remote
+    let span = document.querySelector('span')
+    span.textContent = app.getVersion() + ' (2021.05.01)'
+  </script>
+</body>
+</html>

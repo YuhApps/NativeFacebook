@@ -8,13 +8,17 @@ body {
 
 header {
   background: var(--fb-color);
+  color: white;
   box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
   margin: 0;
+  left: 0;
   padding: 8px 12px;
+  position: fixed;
+  right: 0;
+  top: 0;
 }
 
 header h3 {
-  color: white;
   text-align: center;
   text-transform: uppercase;
 }
@@ -30,6 +34,8 @@ ul {
 .pref-wrapper {
   margin: auto;
   max-width: 1280px;
+  padding-bottom: 20px;
+  padding-top: 80px;
   width: 100%;
 }
 
