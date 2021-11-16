@@ -1,102 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preferences</title>
-  <link rel="stylesheet" href="prefs.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preferences</title>
+    <style>
+        body {
+            font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            --fb-color: #1a77f2;
+            --warning-color: rgb(255, 59, 48);
+            --warning-color-pressed: rgb(199, 49, 42);
+        }
+        
+        header {
+            background: var(--fb-color);
+            color: white;
+            box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
+            margin: 0;
+            left: 0;
+            padding: 8px 12px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            -webkit-app-region: drag
+        }
+        
+        header h3 {
+            text-align: center;
+            text-transform: uppercase;
+        }
+        
+        ul {
+            list-style: none;
+        }
+        
+        .hidden {
+            visibility: hidden;
+        }
+        
+        .pref-wrapper {
+            margin: auto;
+            max-width: 1280px;
+            padding-bottom: 20px;
+            padding-top: 20px;
+            width: 100%;
+        }
+        
+        .pref {
+            background: white;
+            box-shadow: 1px 1px 1px 2px rgba(0.5, 0.5, 0.5, 0.1);
+            margin: 12px 48px;
+            padding: 12px 24px;
+        }
+        
+        .pref label {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .pref input[type="radio"] {
+            margin-bottom: 8px;
+            margin-left: 12px;
+            margin-right: 20px;
+        }
+        
+        .pref-title {
+            border-bottom: 1px solid var(--fb-color);
+            color: var(--fb-color);
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .pref-subtitle {
+            color: grey;
+            font-size: 16px;
+            font-style: italic;
+        }
+        
+        .pref-button-wrapper {
+            display: flex;
+            flex-direction: row;
+        }
+        
+        .pref-button-wrapper .pref-button {
+            flex: 1;
+        }
+        
+        .pref-button-wrapper .pref-button.flex-double {
+            flex: 2;
+        }
+        
+        .pref-button-wrapper .pref-button-spacer {
+            width: 16px;
+        }
+        
+        .pref-button {
+            border: none;
+            border-radius: 4px;
+            box-shadow: 1px 1px 1px 2px rgba(0.5, 0.5, 0.5, 0.1);
+            cursor: pointer;
+            font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+            font-weight: bold;
+            outline: none;
+            padding: 8px 12px;
+            text-transform: uppercase;
+            transition-duration: 0.25s;
+        }
+        
+        .pref-button.white {
+            background: white;
+            color: var(--fb-color);
+        }
+        
+        .pref-button.white:active {
+            background: #e8e8e8;
+            color: var(--fb-color);
+        }
+        
+        .pref-button.primary {
+            background: var(--fb-color);
+            color: white;
+        }
+        
+        .pref-button.warning {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .pref-button.warning:active {
+            background: var(--warning-color-pressed);
+            color: white;
+        }
+    </style>
 </head>
+
 <body>
-  <header>
-    <h3>Preferences</h3>
-  </header>
-  <div class="pref-wrapper">
+    <div class="pref-wrapper">
+        <!-- On app close-->
+        <div class="pref mac">
+            <p class="pref-title">On app close:</p>
+            <!-- acb: App close behavior -->
+            <input type="radio" id="acb-mw-on" name="acb" value="0">
+            <label for="acb-mw-on">Always keep the Main window (for notification badge)</label><br>
+            <input type="radio" id="acb-mw-ac" name="acb" value="1">
+            <label for="acb-mw-ac">Only keep the Main window on charge (MacBook)</label><br>
+            <input type="radio" id="acb-mw-off" name="acb" value="2">
+            <label for="acb-mw-on">Always close the Main window, but remain active (standard macOS)</label><br>
+            <input type="radio" id="acb-quit" name="acb" value="3">
+            <label for="acb-quit">Force quit (cold launch)</label><br>
+        </div>
 
-    <!-- On app close-->
-    <div class="pref mac">
-      <p class="pref-title">On app close:</p>
-      <!-- acb: App close behavior -->
-      <input type="radio" id="acb-close" name="acb" value="0">
-      <label for="acb-close">Remain active (standard macOS)</label><br>
-      <input type="radio" id="acb-quit" name="acb" value="1">
-      <label for="acb-quit">Force quit (cold launch)</label>
+        <!-- Check Camera and Microphone permissions -->
+        <div class="pref">
+            <p class="pref-title">Check Camera and Microphone permissions on launch:</p>
+            <input type="radio" id="cam-mic-off" name="cam_mic" value="0" checked>
+            <label for="cam-mic-off">No</label><br>
+            <input type="radio" id="cam-mic-on" name="cam_mic" value="1">
+            <label for="cam-mic-on">Yes</label><br>
+        </div>
+
+        <!-- Open Messenger on launch -->
+        <div class="pref">
+            <p class="pref-title">Open Messenger on launch:</p>
+            <input type="radio" id="msg-off" name="msg" value="0" checked>
+            <label for="msg-off">No</label><br>
+            <input type="radio" id="msg-on" name="msg" value="1">
+            <label for="msg-on">Yes</label><br>
+        </div>
+
+        <!-- Open Instagram on launch -->
+        <div class="pref">
+            <p class="pref-title">Open Instagram on launch:</p>
+            <input type="radio" id="ins-off" name="ins" value="0" checked>
+            <label for="ins-off">No</label><br>
+            <input type="radio" id="ins-on" name="ins" value="1">
+            <label for="ins-on">Yes</label><br>
+        </div>
+
+        <!-- Spell check -->
+        <div class="pref">
+            <p class="pref-title">Spell check:</p>
+            <input type="radio" id="spell-off" name="spell" value="0" checked>
+            <label for="spell-off">No</label><br>
+            <input type="radio" id="spell-on" name="spell" value="1">
+            <label for="spell-on">Yes</label><br>
+        </div>
+
+        <!-- Dev mode on launch -->
+        <div class="pref">
+            <p class="pref-title">Developer mode:</p>
+            <input type="radio" id="dev-off" name="dev" value="0" checked>
+            <label for="dev-off">No</label><br>
+            <input type="radio" id="dev-on" name="dev" value="1">
+            <label for="dev-on">Yes</label><br>
+        </div>
+
+        <!-- Picture in Picture (Buggy due to Facebook's code, web dev standards and Chromium -->
+        <div class="pref">
+            <p class="pref-title">Picture in Picture:</p>
+            <input type="radio" id="pip-off" name="pip" value="0" checked>
+            <label for="pip-off">No</label><br>
+            <input type="radio" id="pip-on" name="pip" value="1">
+            <label for="pip-on">Yes</label><br>
+            <p class="pref-subtitle">PiP is buggy due to Web development standards and Chromium base.</p>
+        </div>
+
+        <div class="pref">
+            <p class="pref-title">Clear browsing data</p>
+            <div class="pref-button-wrapper">
+                <button class="pref-button white">Clear cache & history</button>
+                <span class="pref-button-spacer"></span>
+                <button class="pref-button warning">Clear all data (will sign you out)</button>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Check Camera and Microphone permissions -->
-    <div class="pref">
-      <p class="pref-title">Check Camera and Microphone permissions on launch:</p>
-      <input type="radio" id="cam-mic-off" name="cam_mic" value="0" checked>
-      <label for="cam-mic-off">No</label><br>
-      <input type="radio" id="cam-mic-on" name="cam_mic" value="1">
-      <label for="cam-mic-on">Yes</label><br>
-    </div>
+    <script>
+        const {
+            app,
+            remote
+        } = require('electron')
+        const settings = require('electron-settings')
+        const macPrefs = document.querySelectorAll('.mac')
+        const radios = document.querySelectorAll('input[type="radio"]')
+        const buttons = document.querySelectorAll('.pref-button')
+        const currentWebContents = remote.getCurrentWebContents()
 
-    <!-- Open Messenger on launch -->
-    <div class="pref">
-      <p class="pref-title">Open Messenger on launch:</p>
-      <input type="radio" id="msg-off" name="msg" value="0" checked>
-      <label for="msg-off">No</label><br>
-      <input type="radio" id="msg-on" name="msg" value="1">
-      <label for="msg-on">Yes</label><br>
-    </div>
+        macPrefs.forEach((pref) => {
+            if (remote.process.platform !== 'darwin') {
+                pref.classList.add('hidden')
+            }
+        })
 
-    <!-- Open Instagram on launch -->
-    <div class="pref">
-      <p class="pref-title">Open Instagram on launch:</p>
-      <input type="radio" id="ins-off" name="ins" value="0" checked>
-      <label for="ins-off">No</label><br>
-      <input type="radio" id="ins-on" name="ins" value="1">
-      <label for="ins-on">Yes</label><br>
-    </div>
+        radios.forEach((radio) => {
+            radio.checked = (settings.getSync(radio.name) || '0') === radio.value
+            radio.addEventListener('change', () => {
+                settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
+            })
+        })
 
-    <!-- Spell check -->
-    <div class="pref">
-      <p class="pref-title">Spell check:</p>
-      <input type="radio" id="spell-off" name="spell" value="0" checked>
-      <label for="spell-off">No</label><br>
-      <input type="radio" id="spell-on" name="spell" value="1">
-      <label for="spell-on">Yes</label><br>
-    </div>
-
-    <!-- Dev mode on launch -->
-    <div class="pref">
-      <p class="pref-title">Developer mode:</p>
-      <input type="radio" id="dev-off" name="dev" value="0" checked>
-      <label for="dev-off">No</label><br>
-      <input type="radio" id="dev-on" name="dev" value="1">
-      <label for="dev-on">Yes</label><br>
-    </div>
-
-    <!-- Picture in Picture (Buggy due to Facebook's code, web dev standards and Chromium -->
-    <div class="pref">
-      <p class="pref-title">Picture in Picture:</p>
-      <input type="radio" id="pip-off" name="pip" value="0" checked>
-      <label for="pip-off">No</label><br>
-      <input type="radio" id="pip-on" name="pip" value="1">
-      <label for="pip-on">Yes</label><br>
-      <p class="pref-subtitle">PiP is buggy due to Web development standards and Chromium base.</p>
-    </div>
-
-  </div>
-
-  <script>
-    const { app, remote } = require('electron')
-    const settings = require('electron-settings')
-    const macPrefs = document.querySelectorAll('.mac')
-    const radios = document.querySelectorAll('input[type="radio"]')
-
-    macPrefs.forEach((pref) => {
-      if (remote.process.platform !== 'darwin') {
-        pref.classList.add('hidden')
-      }
-    })
-
-    radios.forEach((radio) => {
-      radio.checked = (settings.getSync(radio.name) || '0') === radio.value
-      radio.addEventListener('change', () => {
-        settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
-      })
-    })
-  </script>
+        buttons[0].onclick = (e) => {
+            currentWebContents.clearHistory()
+            currentWebContents.session.clearCache()
+        }
+        buttons[1].onclick = (e) => {
+            currentWebContents.session.clearStorageData().then(window.close)
+        }
+    </script>
 </body>
+
 </html>

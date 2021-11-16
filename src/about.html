@@ -12,6 +12,7 @@
         padding: 20px;
         user-select: none;
         --fb-color: #1a77f2;
+        -webkit-app-region: drag;
       }
       h1, h2, h3, h4, h5, h6, strong {
         color: var(--fb-color);
@@ -45,7 +46,7 @@
   <script>
     let { app } = require('electron').remote
     let span = document.querySelector('span')
-    span.textContent = app.getVersion() + ' (2021.05.01)'
+    span.textContent = app.getVersion() + ' (2021.07.02)'
   </script>
 </body>
 </html>

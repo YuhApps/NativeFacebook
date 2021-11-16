@@ -1,63 +1,62 @@
 {
-  "name": "Facebook",
-  "version": "1.0.3",
-  "description": "A Facebook client for macOS and Linux",
-  "main": "src/app.js",
-  "scripts": {
-    "start": "npx electron .",
-    "pack": "npx electron-builder --dir",
-    "dist": "npx electron-builder build"
-  },
-  "build": {
-    "appId": "dev.yuhapps.facebook.katana",
-    "extraResources": [
-      "assets/**"
-    ],
-    "mac": {
-      "asar": true,
-      "category": "public.app-category.social-networking",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "extendInfo": {
-        "NSMicrophoneUsageDescription": "YuhApps' Native Facebook require access to your Microphone for live streaming.",
-        "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming."
-      },
-      "target": "dir"
+    "name": "Facebook",
+    "version": "1.0.8",
+    "description": "A Facebook client for macOS and Linux",
+    "main": "src/app.js",
+    "scripts": {
+        "start": "npx electron .",
+        "pack": "npx electron-builder --dir",
+        "dist": "npx electron-builder build"
     },
-    "protocols": [
-      {
-        "name": "HTTP URLs",
-        "schemes": [
-          "http"
+    "build": {
+        "appId": "dev.yuhapps.facebook.katana",
+        "extraResources": [
+            "assets/**"
+        ],
+        "mac": {
+            "asar": true,
+            "category": "public.app-category.social-networking",
+            "hardenedRuntime": true,
+            "gatekeeperAssess": false,
+            "extendInfo": {
+                "NSMicrophoneUsageDescription": "YuhApps' Native Facebook require access to your Microphone for live streaming.",
+                "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming."
+            },
+            "target": "dir"
+        },
+        "protocols": [{
+                "name": "HTTP URLs",
+                "schemes": [
+                    "http"
+                ]
+            },
+            {
+                "name": "Secure HTTP URLs",
+                "schemes": [
+                    "https"
+                ]
+            }
         ]
-      },
-      {
-        "name": "Secure HTTP URLs",
-        "schemes": [
-          "https"
-        ]
-      }
-    ]
-  },
-  "dependencies": {
-    "canvas": "^2.7.0",
-    "electron-push-receiver": "^2.1.3",
-    "electron-settings": "^4.0.2",
-    "node-gyp": "^7.1.2",
-    "ts-node": "^9.1.1",
-    "typescript": "^4.2.3",
-    "valid-url-utf8": "^1.0.7"
-  },
-  "devDependencies": {
-    "bufferutil": "4",
-    "electron": "12.0.2",
-    "electron-builder": "22.10.5",
-    "utf-8-validate": "5"
-  },
-  "postinstall": "electron-builder install-app-deps",
-  "keywords": [
-    "Facebook"
-  ],
-  "author": "YuhApps",
-  "license": "ISC"
+    },
+    "dependencies": {
+        "canvas": "^2.7.0",
+        "electron-push-receiver": "^2.1.3",
+        "electron-settings": "^4.0.2",
+        "node-gyp": "^7.1.2",
+        "ts-node": "^9.1.1",
+        "typescript": "^4.2.3",
+        "valid-url-utf8": "^1.0.7"
+    },
+    "devDependencies": {
+        "bufferutil": "4",
+        "electron": "^13.1.9",
+        "electron-builder": "^22.9.1",
+        "utf-8-validate": "5"
+    },
+    "postinstall": "electron-builder install-app-deps",
+    "keywords": [
+        "Facebook"
+    ],
+    "author": "YuhApps",
+    "license": "ISC"
 }

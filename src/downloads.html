@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Downloads</title>
+  <style>
+    body {
+      font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      --fb-color: #1a77f2;
+      --warning-color: rgb(255, 59, 48);
+      --warning-color-pressed: rgb(199, 49, 42);
+    }
+
+    header {
+      background: var(--fb-color);
+      color: white;
+      box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
+      margin: 0;
+      left: 0;
+      padding: 8px 12px;
+      position: fixed;
+      right: 0;
+      top: 0;
+      -webkit-app-region: drag
+    }
+
+    header h3 {
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    .hidden {
+      visibility: hidden;
+    }
+
+    .download-wrapper {
+      margin: auto;
+      max-width: 1280px;
+      padding-bottom: 20px;
+      padding-top: 80px;
+      width: 100%;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      background: white;
+      box-shadow: 1px 1px 1px 2px rgba(0.5, 0.5, 0.5, 0.1);
+      display: flex;
+      flex-direction: row;
+      list-style: none;
+      margin: 12px 48px;
+      padding: 12px 24px;
+    }
+
+    li .item {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    li .item .item-title {
+      color: black;
+      font-size: 1rem;
+      font-weight: bold;
+      padding: 4px;
+    }
+
+    li .item .item-subtitle {
+      color: grey;
+      font-size: 1rem;
+      padding: 4px;
+    }
+
+    li .separator {
+      height: 4px;
+      width: 12px;
+    }
+
+    li svg {
+      border-radius: 50%;
+      color: grey;
+      cursor: pointer;
+      padding: 8px;
+      transition-duration: 0.5s;
+    }
+
+    li svg path {
+      fill: grey;
+    }
+
+    li svg:hover {
+      background: #80808020;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h3>Downloads</h3>
+  </header>
+  <div class="download-wrapper">
+    <ul id="downloads">
+      <li>
+        <span class="item">
+          <span class="item-title">Title</span>
+          <br>
+          <span class="item-subtitle">Subtitle</span>
+        </span>
+        <span class="separator"></span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path d="M23 20.168l-8.185-8.187 8.185-8.174-2.832-2.807-8.182 8.179-8.176-8.179-2.81 2.81 8.186 8.196-8.186 8.184 2.81 2.81 8.203-8.192 8.18 8.192z"/></svg>
+      </li>
+    </ul>
+  </div>
+
+  <script>
+    const { app, remote } = require('electron')
+    const settings = require('electron-settings')
+    const currentWebContents = remote.getCurrentWebContents()
+    const ul = document.querySelector('ul')
+
+    let downloadItems = settings.getSync('downloads')
+    downloadItems.forEach((item) => {
+
+      console.log(item)
+
+      let li = document.createElement('li')
+      let span = document.createElement('span')
+      let title = document.createElement('span')
+      let br = document.createElement('br')
+      let subtitle = document.createElement('span')
+      let separator = document.createElement('span')
+      let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+
+      span.className = 'item'
+      title.className = 'item-title'
+      subtitle.className = 'item-subtitle'
+      separator.className = 'separator'
+
+      title.textContent = item.fileName
+      subtitle.textContent = item.savePath
+
+      // svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      svg.setAttribute('width', 16)
+      svg.setAttribute('height', 16)
+      svg.setAttribute('viewBox', '0 0 24 24')
+      svg.innerHTML = `<path d="M23 20.168l-8.185-8.187 8.185-8.174-2.832-2.807-8.182 8.179-8.176-8.179-2.81 2.81 8.186 8.196-8.186 8.184 2.81 2.81 8.203-8.192 8.18 8.192z"/>`
+
+      span.appendChild(title)
+      span.appendChild(br)
+      span.appendChild(subtitle)
+      li.appendChild(span)
+      li.appendChild(separator)
+      li.appendChild(svg)
+      ul.appendChild(li)
+
+      /*
+      item.on('updated', (event, state) => {
+        if (state === 'interrupted') {
+          console.log('Download is interrupted but can be resumed')
+        } else if (state === 'progressing') {
+          if (item.isPaused()) {
+            console.log('Download is paused')
+          } else {
+            console.log(`Received bytes: ${item.getReceivedBytes()}`)
+          }
+        }
+      })
+      item.once('done', (event, state) => {
+        if (state === 'completed') {
+          console.log('Download successfully')
+        } else {
+          console.log(`Download failed: ${state}`)
+        }
+      })
+      */
+
+
+
+    })
+  </script>
+</body>
+</html>
