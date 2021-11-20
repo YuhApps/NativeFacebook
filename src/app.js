@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, powerMonitor, shell, screen, systemPreferences, TouchBar } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar } = require('electron')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
@@ -49,6 +49,8 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin') {
         createAppMenu()
         createDockActions()
+    } else {
+        Menu.setApplicationMenu(null)
     }
 })
 
@@ -81,16 +83,16 @@ app.on('new-window-for-tab', (event) => {
     BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
     window.show()
     window.focus()
+    createTouchBarForWindow(window)
 })
 
 // https://www.electronjs.org/docs/api/app#appsetaboutpaneloptionsoptions
 app.setAboutPanelOptions({
     applicationName: 'Facebook (unofficial)',
-    applicationVersion: '1.0.2',
+    applicationVersion: '1.0.9',
     copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook.\n' +
-        '"Facebook" is a registered trademark of Facebook, Inc.\n' +
-        'All right reserved.',
-    version: '20210418'
+        '"Facebook" is a registered trademark of Meta.',
+    version: '20211120'
 })
 
 app.on('before-quit', (event) => {
@@ -117,13 +119,15 @@ app.on('window-all-closed', () => {
 })
 
 powerMonitor.on('on-battery', () => {
+    if (process.platform !== 'darwin') return
     let acb = settings.getSync('acb') || '0'
-    if (acb === '1' && !mainWindow.isDestroyed()) {
+    if (acb === '1' && !mainWindow.isVisible()) {
         mainWindow.close()
     }
 })
 
 powerMonitor.on('on-ac', () => {
+    if (process.platform !== 'darwin') return
     let acb = settings.getSync('acb') || '0'
     if ((acb === '0' || acb === '1') && (mainWindow.isDestroyed())) {
         createMainWindow(FACEBOOK_URL, false)
@@ -132,8 +136,17 @@ powerMonitor.on('on-ac', () => {
 })
 
 powerMonitor.on('resume', () => {
+    if (process.platform !== 'darwin') return
     let acb = settings.getSync('acb') || '0'
     if ((acb === '0' || acb === '1') && !mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.reload()
+})
+
+powerMonitor.on('lock-screen', () => {
+    if (process.platform !== 'darwin') return
+    let acb = settings.getSync('acb') || '0'
+    if ((acb === '0' || acb === '1') && !mainWindow.isDestroyed()) {
+        mainWindow.close()
+    }
 })
 
 /** End of Basic Electron app events. */
@@ -237,14 +250,15 @@ function askRevertToTheDefaultBrowser(show) {
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, bounds, useMobileUserAgent, show) {
+function createBrowserWindow(url, bounds, useMobileUserAgent) {
     let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
+    let max = settings.getSync('max') || '0' // Windows and Linux only
     let window = new BrowserWindow({
         x: x,
         y: y,
         width: width,
         height: height,
-        show: show === undefined ? true : show,
+        show: false,
         title: "New Tab",
         webviewTag: true,
         webPreferences: {
@@ -256,6 +270,10 @@ function createBrowserWindow(url, bounds, useMobileUserAgent, show) {
     if (useMobileUserAgent) {
         window.webContents.setUserAgent(MOBILE_USER_AGENT)
     }
+    if (max) {
+        window.maximize()
+    }
+    window.show()
     window.loadURL(url)
     setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
@@ -264,7 +282,11 @@ function createBrowserWindow(url, bounds, useMobileUserAgent, show) {
     // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
     window.webContents.on('new-window', (event, url) => {
         event.preventDefault()
-        window.addTabbedWindow(createBrowserWindow(url))
+        if (process.platform === 'darwin') {
+            window.addTabbedWindow(createBrowserWindow(url))
+        } else {
+            createBrowserWindow(url)
+        }
     })
 
     // Create context menu for each window
@@ -275,8 +297,10 @@ function createBrowserWindow(url, bounds, useMobileUserAgent, show) {
 
     window.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
-        menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
-        menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+        if (menu !== null) {
+            menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+        }
     }))
 
     window.webContents.session.on('will-download', (event, item, webContents) => {
@@ -294,14 +318,16 @@ function createBrowserWindow(url, bounds, useMobileUserAgent, show) {
 
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
-        menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
-        menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
-        menu.getMenuItemById('app-menu-reload').enabled = true
-        menu.getMenuItemById('app-menu-copy-url').enabled = true
-        menu.getMenuItemById('app-menu-mute-tab').enabled = true
-        menu.getMenuItemById('app-menu-mute-website').enabled = true
-        menu.getMenuItemById('app-menu-mute-tabs').enabled = true
-        menu.getMenuItemById('app-menu-unmute-tabs').enabled = true
+        if (menu !== null) {
+            menu.getMenuItemById('app-menu-go-back').enabled = window.webContents.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
+            menu.getMenuItemById('app-menu-reload').enabled = true
+            menu.getMenuItemById('app-menu-copy-url').enabled = true
+            menu.getMenuItemById('app-menu-mute-tab').enabled = true
+            menu.getMenuItemById('app-menu-mute-website').enabled = true
+            menu.getMenuItemById('app-menu-mute-tabs').enabled = true
+            menu.getMenuItemById('app-menu-unmute-tabs').enabled = true
+        }
     })
 
     return window
@@ -343,7 +369,9 @@ function createMainWindow(url, show) {
     })
     mainWindow.on('close', (event) => {
         let acb = settings.getSync('acb') || '0'
-        if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
+        if (process.platform !== 'darwin') {
+            return
+        } else if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
             event.preventDefault()
             mainWindow.hide()
         } else {
@@ -433,10 +461,12 @@ function createPrefsWindow() {
             let dev = settings.getSync('dev') || '0'
             let pip = settings.getSync('pip') || '0'
             let menu = Menu.getApplicationMenu()
-            menu.getMenuItemById('pip').visible = pip === '1'
-            menu.getMenuItemById('pip-sep').visible = pip === '1'
-            menu.getMenuItemById('dev-tools').visible = dev === '1'
-            menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
+            if (menu !== null) {
+                menu.getMenuItemById('pip').visible = pip === '1'
+                menu.getMenuItemById('pip-sep').visible = pip === '1'
+                menu.getMenuItemById('dev-tools').visible = dev === '1'
+                menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
+            }
         })
         prefsWindow.on('closed', () => prefsWindow = null)
     }
@@ -510,8 +540,7 @@ function createAppMenu() {
         submenu: [
             new MenuItem({
                 label: 'About Facebook',
-                click: createAboutWindow,
-                // role: 'about'
+                role: 'about'
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
@@ -608,6 +637,7 @@ function createAppMenu() {
                     if (browserWindows) browserWindows.forEach((browserWindow) => browserWindow.webContents.setAudioMuted(false))
                 }
             }),
+            new MenuItem({ type: 'separator' }),
             new MenuItem({
                 label: 'Facebook Home',
                 accelerator: 'CmdOrCtrl+Shift+F',
@@ -615,29 +645,6 @@ function createAppMenu() {
                 click: (menuItem, browserWindow, event) => {
                     if (browserWindow) browserWindow.loadURL(FACEBOOK_URL)
                 }
-            }),
-            new MenuItem({ type: 'separator' }),
-            new MenuItem({
-                label: 'New Blank Tab',
-                accelerator: 'CmdOrCtrl+T',
-                click: (menuItem, browserWindow, event) => {
-                    let window = new BrowserWindow({
-                        webPreferences: {
-                            webSecurity: true,
-                        },
-                    })
-                    window.loadFile('src/blank.html')
-                    window.webContents.on('context-menu', (event, params) => {
-                        createContextMenuForWindow(params).popup()
-                    })
-                    if (mainWindow.isDestroyed()) {
-                        window.show()
-                    } else {
-                        BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
-                        window.show()
-                        window.focus()
-                    }
-                },
             }),
             new MenuItem({
                 label: 'New Facebook Tab',
@@ -680,11 +687,31 @@ function createAppMenu() {
                 },
             }),
             new MenuItem({
-                label: 'New Instagram Mobile Window',
-                accelerator: 'CmdOrCtrl+Shift+I',
+                label: 'New Blank Tab',
+                accelerator: 'CmdOrCtrl+T',
                 click: (menuItem, browserWindow, event) => {
-                    createInstagramMobileWindow()
+                    let window = new BrowserWindow({
+                        webPreferences: {
+                            webSecurity: true,
+                        },
+                    })
+                    window.loadFile('src/blank.html')
+                    window.webContents.on('context-menu', (event, params) => {
+                        createContextMenuForWindow(params).popup()
+                    })
+                    if (mainWindow.isDestroyed()) {
+                        window.show()
+                    } else {
+                        BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
+                        window.show()
+                        window.focus()
+                    }
                 },
+            }),
+            new MenuItem({
+                type: "separator",
+            }), new MenuItem({
+                role: 'close',
             }),
         ],
     })
@@ -750,178 +777,200 @@ function createAppMenu() {
 function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
     let menu = new Menu()
     let dev = settings.getSync('dev') || '0'
-        // Link handlers
-    menu.append(new MenuItem({
-        label: 'Open Link in New Background Tab',
-        visible: linkURL || isLink(selectionText),
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) {
-                let finalWindow, windows = BrowserWindow.getAllWindows()
-                if (windows.length === 1) {
-                    finalWindow = windows[0]
-                } else {
-                    finalWindow = windows[1]
-                }
-                if (linkURL) {
-                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
-                } else {
-                    finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
-                }
-                browserWindow.focus()
-            }
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Open Link in New Foreground Tab',
-        visible: linkURL || isLink(selectionText),
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) {
-                let finalWindow, windows = BrowserWindow.getAllWindows()
-                if (windows.length === 1) {
-                    finalWindow = windows[0]
-                } else {
-                    finalWindow = windows[1]
-                }
-                if (linkURL) {
-                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
-                } else {
-                    finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
+    let pip = settings.getSync('pip') || '0'
+
+    if (linkURL) {
+        menu.append(new MenuItem({
+            label: 'Open Link in New Background Tab',
+            visible: process.platform === 'darwin' && (linkURL || isLink(selectionText)),
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) {
+                    let finalWindow, windows = BrowserWindow.getAllWindows()
+                    if (windows.length === 1) {
+                        finalWindow = windows[0]
+                    } else {
+                        finalWindow = windows[1]
+                    }
+                    if (linkURL) {
+                        finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
+                    } else {
+                        finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
+                    }
+                    browserWindow.focus()
                 }
             }
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Open Link in Browser',
-        visible: linkURL || isLink(selectionText),
-        click: (menuItem, browserWindow, event) => {
-            shell.openExternal(linkURL)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Copy Link address',
-        visible: linkURL,
-        click: (menuItem, browserWindow, event) => {
-            clipboard.writeText(linkURL)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Copy \"' + (linkText.length < 61 ? linkText : linkText.substring(0, 58) + "...") + '\"',
-        visible: linkURL && linkText,
-        click: (menuItem, browserWindow, event) => {
-            clipboard.writeText(linkText)
-        }
-    }))
-    menu.append(new MenuItem({
-        type: 'separator',
-        visible: linkURL
-    }))
+        }))
+        menu.append(new MenuItem({
+            label: 'Open Link in New Foreground Tab',
+            visible: process.platform === 'darwin' && (linkURL || isLink(selectionText)),
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) {
+                    let finalWindow, windows = BrowserWindow.getAllWindows()
+                    if (windows.length === 1) {
+                        finalWindow = windows[0]
+                    } else {
+                        finalWindow = windows[1]
+                    }
+                    if (linkURL) {
+                        finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
+                    } else {
+                        finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
+                    }
+                }
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Open Link in New Window',
+            visible: process.platform !== 'darwin' && (linkURL || isLink(selectionText)),
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) {
+                    createBrowserWindow(linkURL ? linkURL : selectionText.trim())
+                }
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Open Link in Browser',
+            visible: linkURL || isLink(selectionText),
+            click: (menuItem, browserWindow, event) => {
+                shell.openExternal(linkURL ? linkURL : selectionText.trim())
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Copy Link address',
+            visible: linkURL,
+            click: (menuItem, browserWindow, event) => {
+                clipboard.writeText(linkURL)
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Copy \"' + (linkText.length < 61 ? linkText : linkText.substring(0, 58) + "...") + '\"',
+            visible: linkText,
+            click: (menuItem, browserWindow, event) => {
+                clipboard.writeText(linkText)
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator'
+        }))
+    }
 
     // macOS Look Up and Search with Google
-    menu.append(new MenuItem({
-        id: 'look-up',
-        label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
-        visible: process.platform === 'darwin' && selectionText.trim(),
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.showDefinitionForSelection()
-        }
-    }))
-    menu.append(new MenuItem({
-        type: 'separator',
-        visible: process.platform === 'darwin' && selectionText.trim()
-    }))
-    menu.append(new MenuItem({
-        id: 'google-search',
-        label: 'Search with Google',
-        visible: process.platform === 'darwin' && selectionText.trim(),
-        click: (menuItem, browserWindow, event) => {
-            shell.openExternal('https://www.google.com/search?q=' + selectionText)
-        }
-    }))
-    menu.append(new MenuItem({
-        type: 'separator',
-        visible: process.platform === 'darwin' && selectionText
-    }))
+    if (process.platform === 'darwin' && selectionText.trim()) {
+        menu.append(new MenuItem({
+            id: 'look-up',
+            label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.showDefinitionForSelection()
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator',
+        }))
+        menu.append(new MenuItem({
+            id: 'google-search',
+            label: 'Search with Google',
+            click: (menuItem, browserWindow, event) => {
+                shell.openExternal('https://www.google.com/search?q=' + selectionText)
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator',
+        }))
+    }
 
     // Image handlers, only displays with <img>
-    menu.append(new MenuItem({
-        label: 'Open Image in New Tab',
-        visible: mediaType === 'image',
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow && browserWindow) {
-                let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-                browserWindow.addTabbedWindow(createBrowserWindow(url))
+    if (mediaType === 'image') {
+        menu.append(new MenuItem({
+            label: 'Open Image in New Tab',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow && browserWindow) {
+                    let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
+                    browserWindow.addTabbedWindow(createBrowserWindow(url))
+                }
             }
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Copy Image address',
-        visible: mediaType === 'image',
-        click: (menuItem, browserWindow, event) => {
-            let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-            clipboard.writeText(url)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Copy Image to Clipboard',
-        visible: mediaType === 'image',
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.copyImageAt(x, y)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Download Image',
-        visible: mediaType === 'image',
-        click: (menuItem, browserWindow, event) => {
-            let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-            if (browserWindow) browserWindow.webContents.downloadURL(url)
-        }
-    }))
+        }))
+        menu.append(new MenuItem({
+            label: 'Copy Image address',
+            click: (menuItem, browserWindow, event) => {
+                let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
+                clipboard.writeText(url)
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Copy Image to Clipboard',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.copyImageAt(x, y)
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Download Image',
+            click: (menuItem, browserWindow, event) => {
+                let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
+                if (browserWindow) browserWindow.webContents.downloadURL(url)
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator',
+        }))
+    }
+
+    // For non-input text selection.
+    if (selectionText && !isEditable) {
+        menu.append(new MenuItem({
+            label: 'Copy \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
+            enabled: editFlags.canCopy,
+            visible: !linkURL && selectionText,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.copy()
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator',
+        }))
+    }
 
     // Editable handlers (<input />)
-    menu.append(new MenuItem({
-        label: 'Cut',
-        enabled: editFlags.canCut,
-        visible: isEditable,
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.cut()
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Copy',
-        enabled: editFlags.canCopy,
-        visible: !linkURL && (isEditable || selectionText),
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.copy()
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Paste',
-        enabled: editFlags.canPaste,
-        visible: isEditable,
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.paste()
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Paste and Match Style',
-        enabled: editFlags.canPaste,
-        visible: isEditable,
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.pasteAndMatchStyle()
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Select all',
-        enabled: editFlags.canSelectAll,
-        visible: isEditable,
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.selectAll()
-        }
-    }))
-    menu.append(new MenuItem({
-        type: 'separator',
-        visible: isEditable || selectionText
-    }))
+    if (isEditable) {
+        menu.append(new MenuItem({
+            label: 'Cut',
+            enabled: editFlags.canCut,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.cut()
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Copy',
+            enabled: editFlags.canCopy,
+            visible: !linkURL && selectionText,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.copy()
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Paste',
+            enabled: editFlags.canPaste,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.paste()
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Paste and Match Style',
+            enabled: editFlags.canPaste,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.pasteAndMatchStyle()
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Select all',
+            enabled: editFlags.canSelectAll,
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.selectAll()
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator',
+        }))
+    }
 
     /* To be used later if necessary
     menu.append(new MenuItem({
@@ -986,60 +1035,88 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             webContents.setAudioMuted(!webContents.isAudioMuted())
         }
     }))
-    menu.append(new MenuItem({
-        type: 'separator',
-        visible: process.platform !== 'darwin',
-        click: (menuItem, browserWindow, event) => {
-            createInstagramMobileWindow()
-        },
-    }))
-    menu.append(new MenuItem({
-        label: 'Facebook Home',
-        visible: process.platform !== 'darwin',
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.loadURL(FACEBOOK_URL)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'New Instagram Desktop Window',
-        visible: process.platform !== 'darwin',
-        click: (menuItem, browserWindow, event) => {
-            createBrowserWindow(INSTAGRAM_URL)
-        },
-    }))
-    menu.append(new MenuItem({
-        label: 'New Instagram Mobile Window',
-        visible: process.platform !== 'darwin',
-        click: (menuItem, browserWindow, event) => {
-            createInstagramMobileWindow()
-        },
-    }))
+    if (process.platform !== 'darwin') {
+        menu.append(new MenuItem({
+            type: 'separator',
+            click: (menuItem, browserWindow, event) => {
+                createInstagramMobileWindow()
+            },
+        }))
+        menu.append(new MenuItem({
+            label: 'Facebook Home',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.loadURL(FACEBOOK_URL)
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'New Messenger Window',
+            click: (menuItem, browserWindow, event) => {
+                createBrowserWindow(MESSENGER_URL)
+            },
+        }))
+        menu.append(new MenuItem({
+            label: 'New Instagram Window',
+            click: (menuItem, browserWindow, event) => {
+                createBrowserWindow(INSTAGRAM_URL)
+            },
+        }))
+        menu.append(new MenuItem({
+            label: 'New Blank Window',
+            click: (menuItem, browserWindow, event) => {
+                let max = settings.getSync('max') || '0'
+                let window = new BrowserWindow({
+                    show: false,
+                    webPreferences: {
+                        webSecurity: true,
+                    },
+                })
+                window.loadFile('src/blank.html')
+                window.webContents.on('context-menu', (event, params) => {
+                    createContextMenuForWindow(params).popup()
+                })
+                if (max) {
+                    window.maximize()
+                }
+                window.show
+            },
+        }))
+        menu.append(new MenuItem({
+            label: 'Toggle Picture in Picture',
+            id: 'pip',
+            visible: pip === '1',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) {
+                    browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+                }
+            }
+        }))
+    }
 
 
     // Inspect elements (dev tools)
-    menu.append(new MenuItem({ type: 'separator' }))
-    menu.append(new MenuItem({
-        label: 'Inspect element',
-        visible: BrowserWindow.getFocusedWindow() != null && dev === '1',
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.inspectElement(x, y)
-        }
-    }))
-    menu.append(new MenuItem({
-        label: 'Open Developer Console',
-        visible: BrowserWindow.getFocusedWindow() != null && dev === '1',
-        click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.openDevTools()
-        }
-    }))
+    if (BrowserWindow.getFocusedWindow() != null && dev === '1') {
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+            label: 'Inspect element',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.inspectElement(x, y)
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Open Developer Console',
+            click: (menuItem, browserWindow, event) => {
+                if (browserWindow) browserWindow.webContents.openDevTools()
+            }
+        }))
+    }
 
-    menu.append(new MenuItem({
-        label: 'Settings',
-        visible: process.platform !== 'darwin',
-        click: (menuItem, browserWindow, event) => {
-            createPrefsWindow()
-        },
-    }))
+    if (process.platform !== 'darwin') {
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+            label: 'Settings',
+            click: createPrefsWindow,
+        }))
+    }
 
     return menu
 }

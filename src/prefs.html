@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preferences</title>
     <style>
         body {
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
@@ -17,12 +16,11 @@
         }
         
         header {
-            background: var(--fb-color);
-            color: white;
+            background: white;
+            color: var(--fb-color);
             box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
             margin: 0;
             left: 0;
-            padding: 8px 12px;
             position: fixed;
             right: 0;
             top: 0;
@@ -39,14 +37,14 @@
         }
         
         .hidden {
-            visibility: hidden;
+            display: none;
         }
         
         .pref-wrapper {
             margin: auto;
             max-width: 1280px;
             padding-bottom: 20px;
-            padding-top: 20px;
+            padding-top: 80px;
             width: 100%;
         }
         
@@ -139,6 +137,9 @@
 </head>
 
 <body>
+    <header>
+        <h3></h3>
+    </header>
     <div class="pref-wrapper">
         <!-- On app close-->
         <div class="pref mac">
@@ -155,7 +156,7 @@
         </div>
 
         <!-- Check Camera and Microphone permissions -->
-        <div class="pref">
+        <div class="pref mac">
             <p class="pref-title">Check Camera and Microphone permissions on launch:</p>
             <input type="radio" id="cam-mic-off" name="cam_mic" value="0" checked>
             <label for="cam-mic-off">No</label><br>
@@ -164,7 +165,7 @@
         </div>
 
         <!-- Open Messenger on launch -->
-        <div class="pref">
+        <div class="pref mac">
             <p class="pref-title">Open Messenger on launch:</p>
             <input type="radio" id="msg-off" name="msg" value="0" checked>
             <label for="msg-off">No</label><br>
@@ -173,12 +174,21 @@
         </div>
 
         <!-- Open Instagram on launch -->
-        <div class="pref">
+        <div class="pref mac">
             <p class="pref-title">Open Instagram on launch:</p>
             <input type="radio" id="ins-off" name="ins" value="0" checked>
             <label for="ins-off">No</label><br>
             <input type="radio" id="ins-on" name="ins" value="1">
             <label for="ins-on">Yes</label><br>
+        </div>
+
+        <!-- Maximize on launch -->
+        <div class="pref win tux">
+            <p class="pref-title">Maximize on launch:</p>
+            <input type="radio" id="max-off" name="max" value="0" checked>
+            <label for="max-off">No</label><br>
+            <input type="radio" id="max-on" name="max" value="1">
+            <label for="max-on">Yes</label><br>
         </div>
 
         <!-- Spell check -->
@@ -226,18 +236,22 @@
             remote
         } = require('electron')
         const settings = require('electron-settings')
-        const macPrefs = document.querySelectorAll('.mac')
-        const radios = document.querySelectorAll('input[type="radio"]')
         const buttons = document.querySelectorAll('.pref-button')
         const currentWebContents = remote.getCurrentWebContents()
 
-        macPrefs.forEach((pref) => {
-            if (remote.process.platform !== 'darwin') {
+        document.title = isNotMac ? 'Settings' : 'Preferences'
+        document.querySelector('h3').textContent = isNotMac ? 'Settings' : 'Preferences'
+        document.querySelectorAll('.mac').forEach((pref) => {
+            let platform = remote.process.platform
+            if (platform !== 'darwin' && pref.classList.contains('mac')) {
+                pref.classList.add('hidden')
+            } else if (platform !== 'linux' && pref.classList.contains('tux')) {
+                pref.classList.add('hidden')
+            } else if (platform !== 'win32' && pref.classList.contains('win')) {
                 pref.classList.add('hidden')
             }
         })
-
-        radios.forEach((radio) => {
+        document.querySelectorAll('input[type="radio"]').forEach((radio) => {
             radio.checked = (settings.getSync(radio.name) || '0') === radio.value
             radio.addEventListener('change', () => {
                 settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))

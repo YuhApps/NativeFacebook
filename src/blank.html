@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +14,8 @@
         user-select: none;
         --fb-color: #1a77f2;
     }
-    body > div {
+    
+    body>div {
         bottom: 0;
         left: 0;
         position: absolute;
@@ -21,6 +23,7 @@
         text-align: center;
         top: 0;
     }
+    
     input {
         border: 2px solid #d0d0d0;
         border-radius: 28px;
@@ -30,35 +33,41 @@
         padding: 16px;
         width: 60%;
     }
+    
     button {
+        aspect-ratio: 1;
         background: var(--fb-color);
         border: none;
-        border-radius: 16px;
+        border-radius: 0%;
         color: white;
         cursor: pointer;
+        display: inline-flex;
         font-size: 24px;
-        margin-bottom: 20px;
         margin-top: 20px;
+        padding: 12px;
         outline: none;
-        padding: 8px 36px;
         text-transform: uppercase;
+        width: 48px;
     }
-    button:active {
-        
-    }
+    
+    button:active {}
+    
     span {
         color: red;
         font-size: 16px;
         margin-top: 12px;
     }
 </style>
+
 <body>
     <div>
         <input type="text" id="url" placeholder="Enter URL" autofocus>
+        <!-- <br>
+        <button>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M6.185 4.843l11.927 7.157-11.927 7.157 2.982-7.157-2.982-7.157zm-4.185-4.843l5 12-5 12 20-12-20-12z"/></svg>
+        </button>
         <br>
-        <button>➡</button>
-        <br>
-        <span></span>
+        <span></span> -->
     </div>
     <script>
         const input = document.querySelector('input')
@@ -72,27 +81,29 @@
             }
         })
         input.addEventListener('keyup', (e) => {
-            let text = input.value
-            if (validUrlUtf8(text) && (e.key === 'Enter' || e.keyCode === 13)) {
-                if (!text.startsWith('http://') && !text.startsWith('https://')) {
-                    text = 'http://' + text
+                let text = input.value
+                if (validUrlUtf8(text) && (e.key === 'Enter' || e.keyCode === 13)) {
+                    if (!text.startsWith('http://') && !text.startsWith('https://')) {
+                        text = 'http://' + text
+                    }
+                    window.location.href = text
                 }
-                window.location.href = text
-            }
-            return false
-        })
-        document.querySelector('button').addEventListener('click', (e) => {
-            let text = input.value
-            if (validUrlUtf8(text)) {
-                if (!text.startsWith('http://') && !text.startsWith('https://')) {
-                    text = 'http://' + text
+                return false
+            })
+            /*
+            document.querySelector('button').addEventListener('click', (e) => {
+                let text = input.value
+                if (validUrlUtf8(text)) {
+                    if (!text.startsWith('http://') && !text.startsWith('https://')) {
+                        text = 'http://' + text
+                    }
+                    window.location.href = text
+                } else {
+                    span.textContent = 'Enter a valid URL'
                 }
-                window.location.href = text
-            } else {
-                span.textContent = 'Enter a valid URL'
-            }
-            return false
-        })
+                return false
+            })
+            */
 
         function validUrlUtf8(str) {
             // If contains dots more than 1 return false
@@ -103,4 +114,5 @@
         }
     </script>
 </body>
+
 </html>
