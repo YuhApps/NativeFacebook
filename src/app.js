@@ -5,15 +5,13 @@ const { platform } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
 
+const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
 const INSTAGRAM_URL = 'https://www.instagram.com'
-
 const FACEBOOK = 'facebook'
 const MESSENGER = 'messenger'
 const INSTAGRAM = 'instagram'
-
-const MOBILE_USER_AGENT = 'Mozilla/5.0 (Android 9; Mobile; rv:68.0) Gecko/68.0 Firefox/68.0'
 const PIP_JS_EXE =
     `
     if (document.pictureInPictureEnabled) {
@@ -37,9 +35,7 @@ const PIP_JS_EXE =
     }
     `
 
-const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
-
-let aboutWindow, downloadsWindow, mainWindow, instagramMobileWindow, prefsWindow, ongoingDownloads = []
+let aboutWindow, downloadsWindow, mainWindow, prefsWindow, ongoingDownloads = []
 
 /** Basic Electron app events: */
 
@@ -250,7 +246,7 @@ function askRevertToTheDefaultBrowser(show) {
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, bounds, useMobileUserAgent) {
+function createBrowserWindow(url, bounds) {
     let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.getSync('max') || '0' // Windows and Linux only
     let window = new BrowserWindow({
@@ -267,9 +263,6 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
             spellcheck: settings.getSync('spell') === '1' || false
         },
     })
-    if (useMobileUserAgent) {
-        window.webContents.setUserAgent(MOBILE_USER_AGENT)
-    }
     if (max) {
         window.maximize()
     }
@@ -288,13 +281,11 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
             createBrowserWindow(url)
         }
     })
-
     // Create context menu for each window
     window.webContents.on('context-menu', (event, params) => {
         params['mute'] = window && window.webContents.isAudioMuted()
         createContextMenuForWindow(params).popup()
     })
-
     window.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
@@ -302,7 +293,6 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
             menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
         }
     }))
-
     window.webContents.session.on('will-download', (event, item, webContents) => {
         item['id'] = Date.now()
         ongoingDownloads.splice(0, 0, item)
@@ -315,7 +305,6 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
             }
         })
     })
-
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
@@ -339,7 +328,7 @@ function createBrowserWindow(url, bounds, useMobileUserAgent) {
  * @see createBrowserWindow
  */
 function createMainWindow(url, show) {
-    mainWindow = createBrowserWindow(url || FACEBOOK_URL, undefined, undefined, show)
+    mainWindow = createBrowserWindow(url || FACEBOOK_URL, undefined)
     mainWindow.on('ready-to-show', () => {
         let ins = settings.getSync('ins') || '0'
         let msg = settings.getSync('msg') || '0'
@@ -503,19 +492,6 @@ function createDownloadsWindow() {
         downloadsWindow.loadFile('src/downloads.html')
         downloadsWindow.on('closed', () => downloadsWindow = null)
     }
-}
-
-/**
- * Create the instagramMobileWindow
- * @see instagramMobileWindow
- */
-function createInstagramMobileWindow() {
-    if (instagramMobileWindow) {
-        instagramMobileWindow.show()
-    } else {
-        instagramMobileWindow = createBrowserWindow(INSTAGRAM_URL, { width: 480, height: 720 }, true)
-    }
-    instagramMobileWindow.on('closed', () => instagramMobileWindow = null)
 }
 
 /**
@@ -705,6 +681,7 @@ function createAppMenu() {
                         BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
                         window.show()
                         window.focus()
+                        createTouchBarForWindow(window)
                     }
                 },
             }),
@@ -1036,12 +1013,6 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
         }
     }))
     if (process.platform !== 'darwin') {
-        menu.append(new MenuItem({
-            type: 'separator',
-            click: (menuItem, browserWindow, event) => {
-                createInstagramMobileWindow()
-            },
-        }))
         menu.append(new MenuItem({
             label: 'Facebook Home',
             click: (menuItem, browserWindow, event) => {

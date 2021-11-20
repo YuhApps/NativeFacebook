@@ -231,18 +231,16 @@
     </div>
 
     <script>
-        const {
-            app,
-            remote
-        } = require('electron')
+        const { app, remote } = require('electron')
         const settings = require('electron-settings')
         const buttons = document.querySelectorAll('.pref-button')
         const currentWebContents = remote.getCurrentWebContents()
+        const platform = remote.process.platform
 
-        document.title = isNotMac ? 'Settings' : 'Preferences'
-        document.querySelector('h3').textContent = isNotMac ? 'Settings' : 'Preferences'
+        document.title =  platform === 'darwin' ? 'Preferences' : 'Settings'
+        document.querySelector('h3').textContent = document.title
         document.querySelectorAll('.mac').forEach((pref) => {
-            let platform = remote.process.platform
+            
             if (platform !== 'darwin' && pref.classList.contains('mac')) {
                 pref.classList.add('hidden')
             } else if (platform !== 'linux' && pref.classList.contains('tux')) {
