@@ -369,7 +369,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         }
     })
     titleView.setAutoResize({ x: true, y: true, horizontal: true, vertical: false })
-    titleView.setBackgroundColor(titleBarAppearance === 'dark' ? '#242526' : '#ffffff')
+    titleView.setBackgroundColor(titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000')
     window.addBrowserView(titleView)
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
     // Main content

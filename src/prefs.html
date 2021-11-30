@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         ::-webkit-scrollbar {
-            display: none;
+            /* display: none; */
         }
+
         html {
             --fb-color: #1a77f2;
             --warning-color: rgb(255, 59, 48);
@@ -76,15 +77,29 @@
         .hidden {
             display: none;
         }
-        
+
         .pref-wrapper {
             background: var(--web-wash);
+            bottom: 0;
+            left: 0;
+            margin: auto;
+            max-width: 1280px;
+            overflow-y: scroll;
+            position: fixed;
+            padding-bottom: 20px;
+            padding-top: 20px;
+            top: 60px;
+            width: 100%;
+        }
+        
+        .pref-wrapper.mac {
             margin: auto;
             max-width: 1280px;
             overflow-y: scroll;
             padding-bottom: 20px;
-            padding-top: 80px;
-            width: 100%;
+            padding-top: 80px !important;
+            position: relative !important;
+            top: 0 !important;
         }
 
         .dark .pref-wrapper {
@@ -348,8 +363,26 @@
         const prefButtons = document.querySelectorAll('.pref-button')
         const titleBarSettings = settings.getSync('title-bar') || '0'
         if (titleBarSettings === '2' || titleBarSettings === '3') document.body.classList.add('dark')
-        if (platform === 'win32') {
+        
+        if (platform === 'darwin') {
+            document.querySelector('.pref-wrapper').classList.add('mac')
+        } else if (platform === 'win32') {
             document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
+            let windowButtons = document.querySelectorAll('.window-button')
+            windowButtons.forEach((button, index) => {
+                button.onmouseenter = (e) => {
+                    button.classList.add('hover')
+                    button.parentElement.classList.add('hover')
+                }
+                button.onmouseleave = (e) => {
+                    button.classList.remove('hover')
+                    button.parentElement.classList.remove('hover')
+                }
+                button.onclick = (e) => {
+                    if (index === 0) currentWindow.minimize()
+                    else currentWindow.close()
+                }
+        })
         }
 
         document.querySelector('h3').textContent = platform === 'darwin' ? 'Preferences' : 'Settings'
@@ -376,21 +409,6 @@
             currentWebContents.session.clearStorageData().then(window.close)
         }
 
-        let windowButtons = document.querySelectorAll('.window-button')
-        windowButtons.forEach((button, index) => {
-            button.onmouseenter = (e) => {
-                button.classList.add('hover')
-                button.parentElement.classList.add('hover')
-            }
-            button.onmouseleave = (e) => {
-                button.classList.remove('hover')
-                button.parentElement.classList.remove('hover')
-            }
-            button.onclick = (e) => {
-                if (index === 0) currentWindow.minimize()
-                else currentWindow.close()
-            }
-        })
         ipcRenderer.on('dark', (e, dark) => {
             console.log(dark)
             if (dark) document.body.classList.add('dark')
