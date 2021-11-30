@@ -1,10 +1,11 @@
-const { app, BrowserWindow, clipboard, dialog, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar } = require('electron')
+const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar } = require('electron')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
 
+const BUILD_DATE = '2021.11.30'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
@@ -34,17 +35,25 @@ const PIP_JS_EXE =
       }
     }
     `
+const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.esr5mh6w.e9989ue4.r7d6kgcz.rq0escxv.nhd2j8a9.j83agx80'
+    + '.p7hjln8o.kvgmc6g5.cxmmr5t8.oygrvhab.hcukyx3x.jb3vyjys.rz4wbd8a.qt6c0cv9.a8nywdso.i1ao9s8h.esuyzwwr.f1sip0of.lzcic4wl.n00je7tq.'
+    + 'arfg74bv.qs9ysxi8.k77z8yql.l9j0dhe7.abiwlrkh.p8dawk7l.bp9cbjyn.cbu4d94t.datstx6m.taijpn5t.k4urcfbm").click()'
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow, ongoingDownloads = []
+let titleBarAppearance
 
 /** Basic Electron app events: */
 
 app.whenReady().then(() => {
+    titleBarAppearance = settings.getSync('title-bar') || '0'
     requestCameraAndMicrophonePermissions()
-    createMainWindow()
+    let mw = createMainWindow()
     if (process.platform === 'darwin') {
         createAppMenu()
         createDockActions()
+        if (app.getLoginItemSettings().wasOpenedAtLogin) {
+            mw.hide()
+        }
     } else {
         Menu.setApplicationMenu(null)
     }
@@ -66,16 +75,7 @@ app.on('open-url', (event, url) => {
 })
 
 app.on('new-window-for-tab', (event) => {
-    let window = new BrowserWindow({
-        show: false,
-        webPreferences: {
-            webSecurity: true,
-        },
-    })
-    window.loadFile('src/blank.html')
-    window.webContents.on('context-menu', (event, params) => {
-        createContextMenuForWindow(params).popup()
-    })
+    let window = createBrowserWindow('src/blank.html', undefined, true)
     BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
     window.show()
     window.focus()
@@ -85,10 +85,9 @@ app.on('new-window-for-tab', (event) => {
 // https://www.electronjs.org/docs/api/app#appsetaboutpaneloptionsoptions
 app.setAboutPanelOptions({
     applicationName: 'Facebook (unofficial)',
-    applicationVersion: '1.0.9',
-    copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook.\n' +
-        '"Facebook" is a registered trademark of Meta.',
-    version: '20211120'
+    applicationVersion: app.getVersion(),
+    copyright: 'Developed by YUH APPS. This app is not the official Facebook client and has no affliations with Facebook.',
+    version: BUILD_DATE
 })
 
 app.on('before-quit', (event) => {
@@ -126,23 +125,13 @@ powerMonitor.on('on-ac', () => {
     if (process.platform !== 'darwin') return
     let acb = settings.getSync('acb') || '0'
     if ((acb === '0' || acb === '1') && (mainWindow.isDestroyed())) {
-        createMainWindow(FACEBOOK_URL, false)
+        createMainWindow(FACEBOOK_URL, false).hide()
         app.hide()
     }
 })
 
-powerMonitor.on('resume', () => {
-    if (process.platform !== 'darwin') return
-    let acb = settings.getSync('acb') || '0'
-    if ((acb === '0' || acb === '1') && !mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.reload()
-})
-
-powerMonitor.on('lock-screen', () => {
-    if (process.platform !== 'darwin') return
-    let acb = settings.getSync('acb') || '0'
-    if ((acb === '0' || acb === '1') && !mainWindow.isDestroyed()) {
-        mainWindow.close()
-    }
+powerMonitor.on('resume', (event) => {
+    
 })
 
 /** End of Basic Electron app events. */
@@ -246,28 +235,40 @@ function askRevertToTheDefaultBrowser(show) {
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, bounds) {
+function createBrowserWindow(url, bounds, blank) {
+    return titleBarAppearance === '0' ? createBrowserWindowWithSystemTitleBar(url, bounds, blank)
+                                      : createBrowserWindowWithCustomTitleBar(url, bounds, blank)
+}
+
+function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.getSync('max') || '0' // Windows and Linux only
     let window = new BrowserWindow({
         x: x,
         y: y,
-        width: width,
         height: height,
+        width: width,
+        minHeight: 600,
+        minWidth: 800,
         show: false,
-        title: "New Tab",
+        title: "   New Tab",
         webviewTag: true,
         webPreferences: {
             webSecurity: true,
-            plugins: true,
-            spellcheck: settings.getSync('spell') === '1' || false
+            spellcheck: settings.getSync('spell') === '1' || false,
+            scrollBounce: true,
+            plugins: true
         },
     })
-    if (max) {
+    if (max === '1') {
         window.maximize()
     }
     window.show()
-    window.loadURL(url)
+    if (blank) {
+        window.webContents.loadFile(url)
+    } else {
+        window.webContents.loadURL(url)
+    }
     setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
 
@@ -284,7 +285,7 @@ function createBrowserWindow(url, bounds) {
     // Create context menu for each window
     window.webContents.on('context-menu', (event, params) => {
         params['mute'] = window && window.webContents.isAudioMuted()
-        createContextMenuForWindow(params).popup()
+        createContextMenuForWindow(window.webContents, params).popup()
     })
     window.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
@@ -318,7 +319,136 @@ function createBrowserWindow(url, bounds) {
             menu.getMenuItemById('app-menu-unmute-tabs').enabled = true
         }
     })
+    window.webContents.on('page-title-updated', (event, title, explicitSet) => {
+        if (process.platform === 'win32') {
+            event.preventDefault()
+            window.setTitle(`   ${title}`)
+        }
+    })
+    return window
+}
 
+function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
+    let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
+    let max = settings.getSync('max') || '0' // Windows and Linux only
+    let titleBarHeight = process.platform === 'win32' ? 32 : 28
+    if (titleBarAppearance === 0) {
+        nativeTheme.themeSource = process.platform === 'win32' ? 'light' : 'system'
+    } else if (titleBarAppearance === '1') {
+        nativeTheme.themeSource = 'light'
+    } else {
+        nativeTheme.themeSource = 'dark'
+    }
+    let window = new BrowserWindow({
+        x: x,
+        y: y,
+        height: height,
+        width: width,
+        minHeight: 600,
+        minWidth: 800,
+        show: false,
+        backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000',
+        titleBarStyle: titleBarAppearance !== '0' ? 'hidden' : undefined,
+        webPreferences: {
+            webSecurity: true,
+            spellcheck: settings.getSync('spell') === '1' || false,
+            scrollBounce: true,
+            plugins: true
+        },
+    })
+    if (max === '1') {
+        window.maximize()
+    }
+    window.show()
+    // Title
+    let titleView = new BrowserView({
+        webPreferences: {
+            nodeIntegration: true,
+            enableRemoteModule: true,
+            contextIsolation: false,
+        }
+    })
+    titleView.setAutoResize({ x: true, y: true, horizontal: true, vertical: false })
+    titleView.setBackgroundColor(titleBarAppearance === 'dark' ? '#242526' : '#ffffff')
+    window.addBrowserView(titleView)
+    titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+    // Main content
+    let mainView = new BrowserView({ scrollBounce: true, webPreferences: { spellcheck: settings.getSync('spell') === '1' || false } })
+    mainView.setAutoResize({ x: false, y: false, width: true, height: true })
+    mainView.setBackgroundColor(titleBarAppearance === 'dark' ? '#242526' : '#ffffff')
+    window.addBrowserView(mainView)
+    mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+    // Load URL or File
+    titleView.webContents.loadFile('src/title.html')
+    if (blank) {
+        mainView.webContents.loadFile(url)
+    } else {
+        mainView.webContents.loadURL(url)
+    }
+    setuPushReceiver(window.webContents)
+    createTouchBarForWindow(window)
+    // Update title
+    mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
+        titleView.webContents.send('update-title', title)
+        if (titleBarHeight > 100) titleView.webContents.openDevTools()
+    })
+    // Create context menu for each window
+    mainView.webContents.on('context-menu', (event, params) => {
+        params['mute'] = window && mainView.webContents.isAudioMuted()
+        createContextMenuForWindow(mainView.webContents, params).popup()
+    })
+    mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
+        let menu = Menu.getApplicationMenu()
+        if (menu !== null) {
+            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
+        }
+    }))
+    mainView.webContents.on('new-window', (event, url) => {
+        event.preventDefault()
+        createBrowserWindow(url)
+    })
+    window.on('focus', () => {
+        let menu = Menu.getApplicationMenu()
+        if (menu !== null) {
+            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
+            menu.getMenuItemById('app-menu-reload').enabled = true
+            menu.getMenuItemById('app-menu-copy-url').enabled = true
+            menu.getMenuItemById('app-menu-mute-tab').enabled = true
+            menu.getMenuItemById('app-menu-mute-website').visible = false
+            menu.getMenuItemById('app-menu-mute-tabs').visible = false
+            menu.getMenuItemById('app-menu-unmute-tabs').visible = false
+        }
+    })
+    window.on('close', (event) => {
+        let acb = settings.getSync('acb') || '0'
+        if (window !== mainWindow || process.platform !== 'darwin') {
+            titleView.webContents.destroy()
+            mainView.webContents.destroy()
+        } else if (acb === '2' || (acb === '1' && powerMonitor.onBatteryPower)) {
+            titleView.webContents.destroy()
+            mainView.webContents.destroy()
+        }
+    })
+    // Handle app context menu invoke on Windows
+    ipcMain.on('app-context-menu', () => {
+        let menu = new Menu()
+        menu.append(new MenuItem({
+            label: 'Settings',
+            click: createPrefsWindow,
+        }))
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+            label: 'About Facebook',
+            role: 'about'
+        }))
+        menu.popup({
+            window: window,
+            x: 12,
+            y: 4
+        })
+    })
     return window
 }
 
@@ -327,21 +457,8 @@ function createBrowserWindow(url, bounds) {
  * @see mainWindow
  * @see createBrowserWindow
  */
-function createMainWindow(url, show) {
+function createMainWindow(url) {
     mainWindow = createBrowserWindow(url || FACEBOOK_URL, undefined)
-    mainWindow.on('ready-to-show', () => {
-        let ins = settings.getSync('ins') || '0'
-        let msg = settings.getSync('msg') || '0'
-        if (ins === '1') {
-            let focusedWindow = BrowserWindow.getFocusedWindow()
-            focusedWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-        }
-        if (msg === '1') {
-            let focusedWindow = BrowserWindow.getFocusedWindow()
-            focusedWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
-        }
-        mainWindow.focus()
-    })
     mainWindow.on('focus', () => {
         let title = mainWindow.getTitle()
         if (title.startsWith('(')) {
@@ -363,16 +480,6 @@ function createMainWindow(url, show) {
         } else if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
             event.preventDefault()
             mainWindow.hide()
-        } else {
-            let downloads = ongoingDownloads.map((item) => {
-                return {
-                    filename: item.getFilename(),
-                    savePath: item.savePath,
-                    url: item.getURL()
-                }
-            })
-            settings.setSync('downloads', downloads)
-            ongoingDownloads = []
         }
     })
     mainWindow.on('page-title-updated', (event, title, explicitSet) => {
@@ -384,6 +491,7 @@ function createMainWindow(url, show) {
         }
         app.setBadgeCount(badgeCount)
     })
+    return mainWindow
 }
 
 function createAboutWindow() {
@@ -418,6 +526,7 @@ function createAboutWindow() {
     }
 }
 
+
 /**
  * Create the prefsWindow
  * @see prefsWindow
@@ -433,11 +542,16 @@ function createPrefsWindow() {
             x: x,
             y: y,
             alwaysOnTop: true,
+            backgroundColor: titleBarAppearance === '2' ? '#242526' : '#ffffff',
             focusable: true,
             maximizable: false,
+            resizable: false,
+            title: process.platform === 'darwin' ? 'Preferences' : '   Settings',
+            titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
                 tabbingIdentifier: "Prefs",
+                scrollBounce: titleBarAppearance === '0',
                 plugins: true,
                 nodeIntegration: true,
                 enableRemoteModule: true,
@@ -457,7 +571,25 @@ function createPrefsWindow() {
                 menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
             }
         })
-        prefsWindow.on('closed', () => prefsWindow = null)
+        prefsWindow.on('closed', () => {
+            prefsWindow = null
+            let t = settings.getSync('title-bar') || '0'
+            if (t !== titleBarAppearance) {
+                app.relaunch()
+                app.quit()
+            }
+        })
+        prefsWindow.webContents.on('did-finish-load', (e) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+                webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
+                    .then((res) => {
+                        prefsWindow.webContents.send('dark', res)
+                        // console.log(res)
+                    })
+                    .catch((e) => console.log(e))
+            }
+        })
     }
 }
 
@@ -545,31 +677,60 @@ function createAppMenu() {
         ],
     })
     let file = new MenuItem({
-        label: '&File',
+        label: 'File',
         submenu: [
             new MenuItem({
                 label: 'Go Back',
                 id: 'app-menu-go-back',
-                accelerator: 'CmdOrCtrl+Left',
+                enabled: true,
+                accelerator: 'Cmd+Left',
                 click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) browserWindow.webContents.goBack()
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        browserWindow.webContents.goBack()
+                    } else if (browserWindow) {
+                        browserWindow.getBrowserViews()[1].webContents.goBack()
+                    }
                 }
             }),
             new MenuItem({
                 label: 'Go Forward',
                 id: 'app-menu-go-forward',
-                accelerator: 'CmdOrCtrl+Right',
+                enabled: true,
+                accelerator: 'Cmd+Right',
                 click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) browserWindow.webContents.goForward()
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        browserWindow.webContents.goForward()
+                    } else if (browserWindow) {
+                        browserWindow.getBrowserViews()[1].webContents.goForward()
+                    }
                 }
             }),
-            new MenuItem({ label: 'Reload', id: 'app-menu-reload', role: 'reload' }),
+            new MenuItem({
+                label: 'Reload',
+                id: 'app-menu-reload',
+                accelerator: 'Cmd+R',
+                click: (menuItem, browserWindow, event) => {
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        browserWindow.webContents.reload()
+                    } else if (browserWindow) {
+                        browserWindow.getBrowserViews()[1].webContents.reload()
+                    }
+                }
+            }),
             new MenuItem({
                 label: 'Copy Current page URL',
                 id: 'app-menu-copy-url',
                 visible: true,
                 click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        clipboard.writeText(browserWindow.webContents.getURL())
+                    } else if (browserWindow) {
+                        clipboard.writeText(browserWindow.getBrowserViews()[1].webContents.getURL())
+                    }
                 }
             }),
             new MenuItem({
@@ -577,54 +738,70 @@ function createAppMenu() {
                 id: 'app-menu-mute-tab',
                 visible: true,
                 click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
+                    } else {
+                        browserWindow.getBrowserViews()[1].webContents
+                            .setAudioMuted(!browserWindow.getBrowserViews()[1].webContents.isAudioMuted())
+                    }
                 }
             }),
             new MenuItem({
                 label: 'Mute Website',
                 id: 'app-menu-mute-website',
                 visible: true,
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     let browserWindows = BrowserWindow.getAllWindows()
-                    if (browserWindow && browserWindows) {
-                        browserWindow.webContents.executeJavaScript('window.location.origin')
-                            .then((origin) => {
-                                browserWindows.forEach((window) =>
-                                    window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
-                            })
-                    }
+                    if (!browserWindow) return
+                    browserWindow.webContents.executeJavaScript('window.location.origin')
+                    .then((origin) => {
+                        browserWindows.forEach((window) =>
+                            window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
+                        })
                 }
             }),
             new MenuItem({
                 label: 'Mute All Tabs',
                 id: 'app-menu-mute-tabs',
                 visible: true,
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     let browserWindows = BrowserWindow.getAllWindows()
-                    if (browserWindows) browserWindows.forEach((browserWindow) => browserWindow.webContents.setAudioMuted(true))
+                    if (!browserWindows) return
+                    browserWindows.forEach((window) => window.webContents.setAudioMuted(true))
                 }
             }),
             new MenuItem({
                 label: 'Unmute All Tabs',
                 id: 'app-menu-unmute-tabs',
                 visible: true,
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     let browserWindows = BrowserWindow.getAllWindows()
-                    if (browserWindows) browserWindows.forEach((browserWindow) => browserWindow.webContents.setAudioMuted(false))
+                    if (!browserWindows) return
+                    browserWindows.forEach((window) => window.webContents.setAudioMuted(false))
                 }
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
                 label: 'Facebook Home',
-                accelerator: 'CmdOrCtrl+Shift+F',
+                accelerator: 'Cmd+Shift+F',
                 id: 'fb-home',
                 click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) browserWindow.loadURL(FACEBOOK_URL)
+                    if (!browserWindow) return
+                    if (titleBarAppearance === '0') {
+                        browserWindow.webContents.loadURL(FACEBOOK_URL)
+                    } else if (browserWindow) {
+                        browserWindow.getBrowserViews()[1].webContents.loadURL(FACEBOOK_URL)
+                    }
                 }
             }),
             new MenuItem({
                 label: 'New Facebook Tab',
-                accelerator: 'CmdOrCtrl+F',
+                accelerator: 'Cmd+F',
+                visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(FACEBOOK_URL)
@@ -637,7 +814,8 @@ function createAppMenu() {
             }),
             new MenuItem({
                 label: 'New Messenger Tab',
-                accelerator: 'CmdOrCtrl+M',
+                accelerator: 'Cmd+M',
+                visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(MESSENGER_URL)
@@ -651,7 +829,8 @@ function createAppMenu() {
             }),
             new MenuItem({
                 label: 'New Instagram Tab',
-                accelerator: 'CmdOrCtrl+I',
+                accelerator: 'Cmd+I',
+                visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(INSTAGRAM_URL)
@@ -664,17 +843,10 @@ function createAppMenu() {
             }),
             new MenuItem({
                 label: 'New Blank Tab',
-                accelerator: 'CmdOrCtrl+T',
+                accelerator: 'Cmd+T',
+                visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    let window = new BrowserWindow({
-                        webPreferences: {
-                            webSecurity: true,
-                        },
-                    })
-                    window.loadFile('src/blank.html')
-                    window.webContents.on('context-menu', (event, params) => {
-                        createContextMenuForWindow(params).popup()
-                    })
+                    let window = createBrowserWindow('src/blank.html', undefined, true)
                     if (mainWindow.isDestroyed()) {
                         window.show()
                     } else {
@@ -683,6 +855,14 @@ function createAppMenu() {
                         window.focus()
                         createTouchBarForWindow(window)
                     }
+                },
+            }),
+            new MenuItem({
+                label: 'New Blank Window',
+                accelerator: 'Cmd+N',
+                enabled: true,
+                click: (menuItem, browserWindow, event) => {
+                    createBrowserWindow('src/blank.html', undefined, true)
                 },
             }),
             new MenuItem({
@@ -751,15 +931,14 @@ function createAppMenu() {
  * @see createBrowserWindow
  * @see Electron.ContextMenuParams
  */
-function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
+function createContextMenuForWindow(webContents, { editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
     let menu = new Menu()
     let dev = settings.getSync('dev') || '0'
     let pip = settings.getSync('pip') || '0'
-
     if (linkURL) {
         menu.append(new MenuItem({
             label: 'Open Link in New Background Tab',
-            visible: process.platform === 'darwin' && (linkURL || isLink(selectionText)),
+            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText)),
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow) {
                     let finalWindow, windows = BrowserWindow.getAllWindows()
@@ -779,7 +958,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
         }))
         menu.append(new MenuItem({
             label: 'Open Link in New Foreground Tab',
-            visible: process.platform === 'darwin' && (linkURL || isLink(selectionText)),
+            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText)),
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow) {
                     let finalWindow, windows = BrowserWindow.getAllWindows()
@@ -798,7 +977,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
         }))
         menu.append(new MenuItem({
             label: 'Open Link in New Window',
-            visible: process.platform !== 'darwin' && (linkURL || isLink(selectionText)),
+            visible: (process.platform !== 'darwin' || titleBarAppearance !== '0' )&& (linkURL || isLink(selectionText)),
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow) {
                     createBrowserWindow(linkURL ? linkURL : selectionText.trim())
@@ -837,7 +1016,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             id: 'look-up',
             label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.showDefinitionForSelection()
+                if (webContents) webContents.showDefinitionForSelection()
             }
         }))
         menu.append(new MenuItem({
@@ -847,7 +1026,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             id: 'google-search',
             label: 'Search with Google',
             click: (menuItem, browserWindow, event) => {
-                shell.openExternal('https://www.google.com/search?q=' + selectionText)
+                browserWindow.addTabbedWindow(createBrowserWindow('https://www.google.com/search?q=' + selectionText))
             }
         }))
         menu.append(new MenuItem({
@@ -858,11 +1037,15 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     // Image handlers, only displays with <img>
     if (mediaType === 'image') {
         menu.append(new MenuItem({
-            label: 'Open Image in New Tab',
+            label: process.platform === 'darwin' && titleBarAppearance === '0' ? 'Open Image in New Tab' : 'Open Image in New Window',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow && browserWindow) {
+                if (browserWindow) {
                     let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-                    browserWindow.addTabbedWindow(createBrowserWindow(url))
+                    if (process.platform === 'darwin' && titleBarAppearance === '0') {
+                        browserWindow.addTabbedWindow(createBrowserWindow(url))
+                    } else {
+                        createBrowserWindow(url)
+                    }
                 }
             }
         }))
@@ -876,14 +1059,14 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
         menu.append(new MenuItem({
             label: 'Copy Image to Clipboard',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.copyImageAt(x, y)
+                if (webContents) webContents.copyImageAt(x, y)
             }
         }))
         menu.append(new MenuItem({
             label: 'Download Image',
             click: (menuItem, browserWindow, event) => {
                 let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-                if (browserWindow) browserWindow.webContents.downloadURL(url)
+                if (webContents) webContents.downloadURL(url)
             }
         }))
         menu.append(new MenuItem({
@@ -898,7 +1081,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             enabled: editFlags.canCopy,
             visible: !linkURL && selectionText,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.copy()
+                if (webContents) webContents.copy()
             }
         }))
         menu.append(new MenuItem({
@@ -912,36 +1095,35 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             label: 'Cut',
             enabled: editFlags.canCut,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.cut()
+                if (webContents) webContents.cut()
             }
         }))
         menu.append(new MenuItem({
             label: 'Copy',
             enabled: editFlags.canCopy,
-            visible: !linkURL && selectionText,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.copy()
+                if (webContents) webContents.copy()
             }
         }))
         menu.append(new MenuItem({
             label: 'Paste',
             enabled: editFlags.canPaste,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.paste()
+                if (webContents) webContents.paste()
             }
         }))
         menu.append(new MenuItem({
             label: 'Paste and Match Style',
             enabled: editFlags.canPaste,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.pasteAndMatchStyle()
+                if (webContents) webContents.pasteAndMatchStyle()
             }
         }))
         menu.append(new MenuItem({
             label: 'Select all',
             enabled: editFlags.canSelectAll,
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.selectAll()
+                if (webContents) webContents.selectAll()
             }
         }))
         menu.append(new MenuItem({
@@ -975,80 +1157,61 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
     // Navigators, always available
     menu.append(new MenuItem({
         label: 'Go Back',
-        visible: BrowserWindow.getFocusedWindow() != null,
-        enabled: BrowserWindow.getFocusedWindow() != null && BrowserWindow.getFocusedWindow().webContents.canGoBack(),
+        visible: webContents,
+        enabled: webContents && webContents.canGoBack(),
         click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.goBack()
+            if (webContents) webContents.goBack()
         }
     }))
     menu.append(new MenuItem({
         label: 'Go Forward',
-        visible: BrowserWindow.getFocusedWindow() != null,
-        enabled: BrowserWindow.getFocusedWindow() != null && BrowserWindow.getFocusedWindow().webContents.canGoForward(),
+        visible: webContents,
+        enabled: webContents && webContents.canGoForward(),
         click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.goForward()
+            if (webContents) webContents.goForward()
         }
     }))
     menu.append(new MenuItem({
         label: 'Reload',
-        visible: BrowserWindow.getFocusedWindow() != null,
-        enabled: BrowserWindow.getFocusedWindow() != null,
+        visible: webContents,
+        enabled: webContents,
         click: (menuItem, browserWindow, event) => {
-            if (browserWindow) browserWindow.webContents.reload()
+            if (webContents) webContents.reload()
         }
     }))
     menu.append(new MenuItem({
         label: 'Copy Current page URL',
-        visible: BrowserWindow.getFocusedWindow() != null,
+        visible: webContents,
         click: (menuItem, browserWindow, event) => {
-            if (browserWindow) clipboard.writeText(browserWindow.webContents.getURL())
+            if (webContents) clipboard.writeText(webContents.getURL())
         }
     }))
     menu.append(new MenuItem({
         label: mute ? 'Unmute' : 'Mute',
-        visible: BrowserWindow.getFocusedWindow() != null,
+        visible: webContents,
         click: (menuItem, browserWindow, event) => {
-            let webContents = browserWindow.webContents
             webContents.setAudioMuted(!webContents.isAudioMuted())
         }
     }))
     if (process.platform !== 'darwin') {
+        menu.append(new MenuItem({ type: 'separator' }))
         menu.append(new MenuItem({
             label: 'Facebook Home',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.loadURL(FACEBOOK_URL)
+                if (webContents) webContents.loadURL(FACEBOOK_URL)
             }
-        }))
-        menu.append(new MenuItem({
-            label: 'New Messenger Window',
-            click: (menuItem, browserWindow, event) => {
-                createBrowserWindow(MESSENGER_URL)
-            },
-        }))
-        menu.append(new MenuItem({
-            label: 'New Instagram Window',
-            click: (menuItem, browserWindow, event) => {
-                createBrowserWindow(INSTAGRAM_URL)
-            },
         }))
         menu.append(new MenuItem({
             label: 'New Blank Window',
             click: (menuItem, browserWindow, event) => {
-                let max = settings.getSync('max') || '0'
-                let window = new BrowserWindow({
-                    show: false,
-                    webPreferences: {
-                        webSecurity: true,
-                    },
-                })
-                window.loadFile('src/blank.html')
-                window.webContents.on('context-menu', (event, params) => {
-                    createContextMenuForWindow(params).popup()
-                })
-                if (max) {
-                    window.maximize()
+                let window = createBrowserWindow('src/blank.html', undefined, true)
+                if (mainWindow.isDestroyed()) {
+                    window.show()
+                } else {
+                    window.show()
+                    window.focus()
+                    createTouchBarForWindow(window)
                 }
-                window.show
             },
         }))
         menu.append(new MenuItem({
@@ -1057,7 +1220,7 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
             visible: pip === '1',
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow) {
-                    browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+                    webContents.executeJavaScript(PIP_JS_EXE)
                 }
             }
         }))
@@ -1065,18 +1228,18 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
 
 
     // Inspect elements (dev tools)
-    if (BrowserWindow.getFocusedWindow() != null && dev === '1') {
+    if (webContents && dev === '1') {
         menu.append(new MenuItem({ type: 'separator' }))
         menu.append(new MenuItem({
             label: 'Inspect element',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.inspectElement(x, y)
+                webContents.inspectElement(x, y)
             }
         }))
         menu.append(new MenuItem({
             label: 'Open Developer Console',
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) browserWindow.webContents.openDevTools()
+                webContents.openDevTools()
             }
         }))
     }
@@ -1096,41 +1259,41 @@ function createContextMenuForWindow({ editFlags, isEditable, linkURL, linkText, 
  * Create Dock actions on macOS
  */
 function createDockActions() {
+    let useTab = titleBarAppearance === '0'
     let template = [
         new MenuItem({
-            label: 'New Facebook Tab',
+            label: useTab ? 'New Facebook Tab' : 'New Facebook Window',
             click: (menuItem, browserWindow, event) => {
-                if (mainWindow.isDestroyed()) {
-                    createMainWindow(FACEBOOK_URL)
-                } else if (browserWindow) {
+                if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
-                } else {
+                } else if (mainWindow.isDestroyed()) {
                     mainWindow = createBrowserWindow(FACEBOOK_URL)
+                } else {
+                    createBrowserWindow(FACEBOOK_URL)
                 }
             },
         }),
         new MenuItem({
-            label: 'New Messenger Tab',
+            label: useTab ? 'New Messenger Tab' : 'New Messenger Window',
             click: (menuItem, browserWindow, event) => {
-                if (mainWindow.isDestroyed()) {
-                    createMainWindow(MESSENGER_URL)
-                } else if (browserWindow) {
+                if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
+                } else if (mainWindow.isDestroyed()) {
+                    mainWindow = createBrowserWindow(MESSENGER_URL)
                 } else {
-                    let bounds = settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                    mainWindow = createBrowserWindow(MESSENGER_URL, bounds)
+                    createBrowserWindow(MESSENGER_URL)
                 }
             },
         }),
         new MenuItem({
-            label: 'New Instagram Tab',
+            label: useTab ? 'New Instagram Tab' : 'New Instagram Window',
             click: (menuItem, browserWindow, event) => {
-                if (mainWindow.isDestroyed()) {
-                    createMainWindow(INSTAGRAM_URL)
-                } else if (browserWindow) {
+                if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-                } else {
+                } else if (mainWindow.isDestroyed()) {
                     mainWindow = createBrowserWindow(INSTAGRAM_URL)
+                } else {
+                    createBrowserWindow(INSTAGRAM_URL)
                 }
             },
         })
@@ -1145,6 +1308,7 @@ function createTouchBarForWindow(window) {
     if (process.platform !== 'darwin') return
     let resolvePath = (name) => path.join(__dirname, `/assets/${name}_mono.png`)
     let resizeOptions = { width: 24, height: 24 }
+    let useTab = titleBarAppearance === '0'
     window.setTouchBar(
         new TouchBar({
             items: [
@@ -1152,10 +1316,12 @@ function createTouchBarForWindow(window) {
                     icon: nativeImage.createFromPath(resolvePath(FACEBOOK)).resize(resizeOptions),
                     click: () => {
                         let browserWindow = BrowserWindow.getFocusedWindow()
-                        if (browserWindow) {
+                        if (browserWindow && useTab) {
                             browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
-                        } else {
+                        } else if (mainWindow.isDestroyed()) {
                             mainWindow = createBrowserWindow(FACEBOOK_URL)
+                        } else {
+                            createBrowserWindow(FACEBOOK_URL)
                         }
                     }
                 }),
@@ -1163,10 +1329,12 @@ function createTouchBarForWindow(window) {
                     icon: nativeImage.createFromPath(resolvePath(MESSENGER)).resize(resizeOptions),
                     click: () => {
                         let browserWindow = BrowserWindow.getFocusedWindow()
-                        if (browserWindow) {
+                        if (browserWindow && useTab) {
                             browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
-                        } else {
+                        } else if (mainWindow.isDestroyed()) {
                             mainWindow = createBrowserWindow(MESSENGER_URL)
+                        } else {
+                            createBrowserWindow(MESSENGER_URL)
                         }
                     }
                 }),
@@ -1174,10 +1342,12 @@ function createTouchBarForWindow(window) {
                     icon: nativeImage.createFromPath(resolvePath(INSTAGRAM)).resize(resizeOptions),
                     click: () => {
                         let browserWindow = BrowserWindow.getFocusedWindow()
-                        if (browserWindow) {
+                        if (browserWindow && useTab) {
                             browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-                        } else {
+                        } else if (mainWindow.isDestroyed()) {
                             mainWindow = createBrowserWindow(INSTAGRAM_URL)
+                        } else {
+                            createBrowserWindow(INSTAGRAM_URL)
                         }
                     }
                 }),

@@ -1,39 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        html {
+            --fb-color: #1a77f2;
+            --warning-color: rgb(255, 59, 48);
+            --warning-color-pressed: rgb(199, 49, 42);
+            --web-wash: rgb(240, 242, 245);
+            --web-wash-dark: #18191a;
+            --fb-nav-dark: #242526;
+        }
+
         body {
+            background: white;
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
             margin: 0;
             padding: 0;
             user-select: none;
-            --fb-color: #1a77f2;
-            --warning-color: rgb(255, 59, 48);
-            --warning-color-pressed: rgb(199, 49, 42);
+        }
+
+        body.dark {
+            background: #242526;
         }
         
         header {
             background: white;
             color: var(--fb-color);
-            box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             margin: 0;
             left: 0;
             position: fixed;
             right: 0;
             top: 0;
+            z-index: 20;
             -webkit-app-region: drag
+        }
+
+        .dark header {
+            background: #242526;
+            color: white;
         }
         
         header h3 {
             text-align: center;
             text-transform: uppercase;
         }
+
+        .window-buttons-wrapper {
+            display: flex;
+            flex-direction: row;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 25;
+            -webkit-app-region: drag
+        }
+
+        .button-wrapper button {
+            cursor: pointer;
+            height: 32px;
+            width: 48px;
+            -webkit-app-region: no-drag;
+        }
         
         ul {
             list-style: none;
+            overflow-y: scroll;
         }
         
         .hidden {
@@ -41,18 +78,30 @@
         }
         
         .pref-wrapper {
+            background: var(--web-wash);
             margin: auto;
             max-width: 1280px;
+            overflow-y: scroll;
             padding-bottom: 20px;
             padding-top: 80px;
             width: 100%;
         }
+
+        .dark .pref-wrapper {
+            background: var(--web-wash-dark);
+        }
         
         .pref {
             background: white;
-            box-shadow: 1px 1px 1px 2px rgba(0.5, 0.5, 0.5, 0.1);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             margin: 12px 48px;
             padding: 12px 24px;
+        }
+
+        .dark .pref {
+            background: #242526;
+            color: white;
         }
         
         .pref label {
@@ -71,6 +120,11 @@
             color: var(--fb-color);
             font-size: 16px;
             font-weight: bold;
+        }
+
+        .dark .pref-title {
+            border-bottom: 1px solid lightgrey;
+            color: lightgrey;
         }
         
         .pref-subtitle {
@@ -133,14 +187,92 @@
             background: var(--warning-color-pressed);
             color: white;
         }
-    </style>
-</head>
 
+        .dark input[type='radio']:checked {
+            filter: brightness(125%);
+        }
+    </style>
+    <style>
+        .window-close, .window-maximize, .window-unmaximize, .window-minimize {
+            background: black;
+        }
+        .dark .window-close, .dark .window-maximize, .dark .window-unmaximize, .dark .window-minimize, 
+        .black .window-close, .black .window-maximize, .black .window-unmaximize, .black .window-minimize  {
+            background: white;
+        }
+        .dark .window-close.hover, .dark .window-maximize.hover, .dark .window-unmaximize.hover, .dark .window-minimize.hover, 
+        .black .window-close.hover, .black .window-maximize.hover, .black .window-unmaximize.hover, .black .window-minimize.hover {
+            background: black;
+        }
+        .button-wrapper {
+            background: transparent;
+        }
+        .button-wrapper.close.hover {
+            background: #ff5e57;
+        }
+        .button-wrapper.maximize.hover, .button-wrapper.unmaximize.hover {
+            background: #28c840;
+        }
+        .button-wrapper.minimize.hover {
+            background: #ffbe2c;
+        }
+        .hidden {
+            display: none;
+        }
+        .window-close {
+            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+        }
+        
+        .window-unmaximize {
+            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+        }
+        
+        .window-maximize {
+            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+        }
+        
+        .window-minimize {
+            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
+        }
+    </style>
+    <script>
+        const { app, remote, ipcRenderer } = require('electron')
+        const settings = require('electron-settings')
+        const currentWindow = remote.getCurrentWindow()
+        const currentWebContents = remote.getCurrentWebContents()
+        const platform = remote.process.platform
+    </script>
+</head>
 <body>
     <header>
-        <h3></h3>
+        <h3>&nbsp;</h3>
     </header>
+    <div class="window-buttons-wrapper hidden">
+        <div class="button-wrapper minimize">
+            <button class="window-button window-minimize" />
+        </div>
+        <div class="button-wrapper close">
+            <button class="window-button window-close" />
+        </div>
+    </div>
     <div class="pref-wrapper">
+        <!-- TitleBar -->
+        <div class="pref mac win">
+            <p class="pref-title">Title Bar appearance (Requires restart):</p>
+            <input type="radio" id="title-bar-system" name="title-bar" value="0" checked>
+            <label for="title-bar-system">System</label><br>
+            <input type="radio" id="title-bar-light" name="title-bar" value="1">
+            <label for="title-bar-light">Light</label><br>
+            <input type="radio" id="title-bar-dark" name="title-bar" value="2">
+            <label for="title-bar-dark">Dark</label><br>
+            <input type="radio" id="title-bar-black" name="title-bar" value="3">
+            <label for="title-bar-black">Black</label><br>
+        </div>
+
         <!-- On app close-->
         <div class="pref mac">
             <p class="pref-title">On app close:</p>
@@ -164,24 +296,6 @@
             <label for="cam-mic-on">Yes</label><br>
         </div>
 
-        <!-- Open Messenger on launch -->
-        <div class="pref mac">
-            <p class="pref-title">Open Messenger on launch:</p>
-            <input type="radio" id="msg-off" name="msg" value="0" checked>
-            <label for="msg-off">No</label><br>
-            <input type="radio" id="msg-on" name="msg" value="1">
-            <label for="msg-on">Yes</label><br>
-        </div>
-
-        <!-- Open Instagram on launch -->
-        <div class="pref mac">
-            <p class="pref-title">Open Instagram on launch:</p>
-            <input type="radio" id="ins-off" name="ins" value="0" checked>
-            <label for="ins-off">No</label><br>
-            <input type="radio" id="ins-on" name="ins" value="1">
-            <label for="ins-on">Yes</label><br>
-        </div>
-
         <!-- Maximize on launch -->
         <div class="pref win tux">
             <p class="pref-title">Maximize on launch:</p>
@@ -192,7 +306,7 @@
         </div>
 
         <!-- Spell check -->
-        <div class="pref">
+        <div class="pref mac tux win">
             <p class="pref-title">Spell check:</p>
             <input type="radio" id="spell-off" name="spell" value="0" checked>
             <label for="spell-off">No</label><br>
@@ -201,7 +315,7 @@
         </div>
 
         <!-- Dev mode on launch -->
-        <div class="pref">
+        <div class="pref mac tux win">
             <p class="pref-title">Developer mode:</p>
             <input type="radio" id="dev-off" name="dev" value="0" checked>
             <label for="dev-off">No</label><br>
@@ -210,7 +324,7 @@
         </div>
 
         <!-- Picture in Picture (Buggy due to Facebook's code, web dev standards and Chromium -->
-        <div class="pref">
+        <div class="pref mac tux win">
             <p class="pref-title">Picture in Picture:</p>
             <input type="radio" id="pip-off" name="pip" value="0" checked>
             <label for="pip-off">No</label><br>
@@ -219,7 +333,7 @@
             <p class="pref-subtitle">PiP is buggy due to Web development standards and Chromium base.</p>
         </div>
 
-        <div class="pref">
+        <div class="pref mac tux win">
             <p class="pref-title">Clear browsing data</p>
             <div class="pref-button-wrapper">
                 <button class="pref-button white">Clear cache & history</button>
@@ -231,21 +345,20 @@
     </div>
 
     <script>
-        const { app, remote } = require('electron')
-        const settings = require('electron-settings')
-        const buttons = document.querySelectorAll('.pref-button')
-        const currentWebContents = remote.getCurrentWebContents()
-        const platform = remote.process.platform
+        const prefButtons = document.querySelectorAll('.pref-button')
+        const titleBarSettings = settings.getSync('title-bar') || '0'
+        if (titleBarSettings === '2' || titleBarSettings === '3') document.body.classList.add('dark')
+        if (platform === 'win32') {
+            document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
+        }
 
-        document.title =  platform === 'darwin' ? 'Preferences' : 'Settings'
-        document.querySelector('h3').textContent = document.title
-        document.querySelectorAll('.mac').forEach((pref) => {
-            
-            if (platform !== 'darwin' && pref.classList.contains('mac')) {
+        document.querySelector('h3').textContent = platform === 'darwin' ? 'Preferences' : 'Settings'
+        document.querySelectorAll('.pref').forEach((pref) => {
+            if (platform === 'darwin' && !pref.classList.contains('mac')) {
                 pref.classList.add('hidden')
-            } else if (platform !== 'linux' && pref.classList.contains('tux')) {
+            } else if (platform === 'linux' && !pref.classList.contains('tux')) {
                 pref.classList.add('hidden')
-            } else if (platform !== 'win32' && pref.classList.contains('win')) {
+            } else if (platform === 'win32' && !pref.classList.contains('win')) {
                 pref.classList.add('hidden')
             }
         })
@@ -255,14 +368,34 @@
                 settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
             })
         })
-
-        buttons[0].onclick = (e) => {
+        prefButtons[0].onclick = (e) => {
             currentWebContents.clearHistory()
             currentWebContents.session.clearCache()
         }
-        buttons[1].onclick = (e) => {
+        prefButtons[1].onclick = (e) => {
             currentWebContents.session.clearStorageData().then(window.close)
         }
+
+        let windowButtons = document.querySelectorAll('.window-button')
+        windowButtons.forEach((button, index) => {
+            button.onmouseenter = (e) => {
+                button.classList.add('hover')
+                button.parentElement.classList.add('hover')
+            }
+            button.onmouseleave = (e) => {
+                button.classList.remove('hover')
+                button.parentElement.classList.remove('hover')
+            }
+            button.onclick = (e) => {
+                if (index === 0) currentWindow.minimize()
+                else currentWindow.close()
+            }
+        })
+        ipcRenderer.on('dark', (e, dark) => {
+            console.log(dark)
+            if (dark) document.body.classList.add('dark')
+            else document.body.classList.remove('dark')
+        })
     </script>
 </body>
 

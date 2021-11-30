@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +14,7 @@
         --fb-color: #1a77f2;
     }
     
-    body>div {
+    .url {
         bottom: 0;
         left: 0;
         position: absolute;
@@ -34,40 +33,38 @@
         width: 60%;
     }
     
-    button {
-        aspect-ratio: 1;
-        background: var(--fb-color);
-        border: none;
-        border-radius: 0%;
-        color: white;
-        cursor: pointer;
-        display: inline-flex;
-        font-size: 24px;
-        margin-top: 20px;
-        padding: 12px;
-        outline: none;
-        text-transform: uppercase;
-        width: 48px;
-    }
-    
-    button:active {}
-    
     span {
         color: red;
         font-size: 16px;
         margin-top: 12px;
     }
+
+    .sites {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        margin: auto;
+        margin-top: 60px;
+        text-align: center;
+    }
+
+    .sites a {
+        margin: 20px;
+    }
+
+    .sites img {
+        width: 40px;
+    }
 </style>
 
 <body>
-    <div>
+    <div class="url">
         <input type="text" id="url" placeholder="Enter URL" autofocus>
-        <!-- <br>
-        <button>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M6.185 4.843l11.927 7.157-11.927 7.157 2.982-7.157-2.982-7.157zm-4.185-4.843l5 12-5 12 20-12-20-12z"/></svg>
-        </button>
-        <br>
-        <span></span> -->
+        <div class="sites">
+            <a href="https://www.facebook.com"><img src="assets/facebook.png" alt=""></a>
+            <a href="https://www.messenger.com"><img src="assets/messenger.png" alt=""></a>
+            <a href="https://www.instagram.com"><img src="assets/instagram.png" alt=""></a>
+        </div>
     </div>
     <script>
         const input = document.querySelector('input')
@@ -81,29 +78,15 @@
             }
         })
         input.addEventListener('keyup', (e) => {
-                let text = input.value
-                if (validUrlUtf8(text) && (e.key === 'Enter' || e.keyCode === 13)) {
-                    if (!text.startsWith('http://') && !text.startsWith('https://')) {
-                        text = 'http://' + text
-                    }
-                    window.location.href = text
+            let text = input.value
+            if (validUrlUtf8(text) && (e.key === 'Enter' || e.keyCode === 13)) {
+                if (!text.startsWith('http://') && !text.startsWith('https://')) {
+                    text = 'http://' + text
                 }
-                return false
-            })
-            /*
-            document.querySelector('button').addEventListener('click', (e) => {
-                let text = input.value
-                if (validUrlUtf8(text)) {
-                    if (!text.startsWith('http://') && !text.startsWith('https://')) {
-                        text = 'http://' + text
-                    }
-                    window.location.href = text
-                } else {
-                    span.textContent = 'Enter a valid URL'
-                }
-                return false
-            })
-            */
+                window.location.href = text
+            }
+            return false
+        })
 
         function validUrlUtf8(str) {
             // If contains dots more than 1 return false
