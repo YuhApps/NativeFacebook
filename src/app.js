@@ -5,7 +5,7 @@ const { platform } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
 
-const BUILD_DATE = '2021.11.30'
+const BUILD_DATE = '2021.12.05'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
@@ -40,12 +40,13 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
     + 'arfg74bv.qs9ysxi8.k77z8yql.l9j0dhe7.abiwlrkh.p8dawk7l.bp9cbjyn.cbu4d94t.datstx6m.taijpn5t.k4urcfbm").click()'
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow, ongoingDownloads = []
-let titleBarAppearance
+let titleBarAppearance, forceDarkScrollbar
 
 /** Basic Electron app events: */
 
 app.whenReady().then(() => {
     titleBarAppearance = settings.getSync('title-bar') || '0'
+    forceDarkScrollbar = settings.getSync('scrollbar') || '0'
     requestCameraAndMicrophonePermissions()
     let mw = createMainWindow()
     if (process.platform === 'darwin') {
@@ -263,14 +264,30 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     if (max === '1') {
         window.maximize()
     }
+    window.focus()
     window.show()
+
     if (blank) {
-        window.webContents.loadFile(url)
+        window.webContents.loadFile(url).then(() => {
+            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
+                window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            }
+        })
     } else {
-        window.webContents.loadURL(url)
+        window.webContents.loadURL(url).then(() => {
+            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
+                window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            }
+        })
     }
     setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
+    //
+    window.webContents.on('did-finish-load', () => {
+        if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
+            window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+        }
+    })
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
     // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
@@ -373,7 +390,15 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     window.addBrowserView(titleView)
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
     // Main content
-    let mainView = new BrowserView({ scrollBounce: true, webPreferences: { spellcheck: settings.getSync('spell') === '1' || false } })
+    let mainView = new BrowserView({
+        scrollBounce: true, 
+        webPreferences: {
+            spellcheck: settings.getSync('spell') === '1' || false,
+            enableRemoteModule: blank,
+            contextIsolation: true,
+            preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
+        }
+    })
     mainView.setAutoResize({ x: false, y: false, width: true, height: true })
     mainView.setBackgroundColor(titleBarAppearance === 'dark' ? '#242526' : '#ffffff')
     window.addBrowserView(mainView)
@@ -381,12 +406,26 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     // Load URL or File
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
-        mainView.webContents.loadFile(url)
+        mainView.webContents.loadFile(url).then(() => {
+            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
+                mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            }
+        })
     } else {
-        mainView.webContents.loadURL(url)
+        mainView.webContents.loadURL(url).then(() => {
+            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
+                mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            }
+        })
     }
     setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
+    //
+    mainView.webContents.on('did-finish-load', () => {
+        if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
+            mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+        }
+    })
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
         titleView.webContents.send('update-title', title)
@@ -408,6 +447,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         event.preventDefault()
         createBrowserWindow(url)
     })
+    
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
@@ -426,9 +466,13 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         if (window !== mainWindow || process.platform !== 'darwin') {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
+            window.removeBrowserView(titleView)
+            window.removeBrowserView(mainView)
         } else if (acb === '2' || (acb === '1' && powerMonitor.onBatteryPower)) {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
+            window.removeBrowserView(titleView)
+            window.removeBrowserView(mainView)
         }
     })
     // Handle app context menu invoke on Windows
@@ -482,15 +526,27 @@ function createMainWindow(url) {
             mainWindow.hide()
         }
     })
-    mainWindow.on('page-title-updated', (event, title, explicitSet) => {
-        let badgeCount = 0
-        if (title.startsWith('(')) {
-            try {
-                badgeCount = parseInt(title.substring(1, title.indexOf(')')))
-            } catch (e) {}
-        }
-        app.setBadgeCount(badgeCount)
-    })
+    if (titleBarAppearance === '0') {
+        mainWindow.webContents.on('page-title-updated', (event, title, explicitSet) => {
+            let badgeCount = 0
+            if (title.startsWith('(')) {
+                try {
+                    badgeCount = parseInt(title.substring(1, title.indexOf(')')))
+                } catch (e) {}
+            }
+            app.setBadgeCount(badgeCount)
+        })
+    } else {
+        mainWindow.getBrowserViews()[1].webContents.on('page-title-updated', (event, title, explicitSet) => {
+            let badgeCount = 0
+            if (title.startsWith('(')) {
+                try {
+                    badgeCount = parseInt(title.substring(1, title.indexOf(')')))
+                } catch (e) {}
+            }
+            app.setBadgeCount(badgeCount)
+        })
+    }
     return mainWindow
 }
 
@@ -542,7 +598,7 @@ function createPrefsWindow() {
             x: x,
             y: y,
             alwaysOnTop: true,
-            backgroundColor: titleBarAppearance === '2' ? '#242526' : '#ffffff',
+            backgroundColor: titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffff' : '#000000',
             focusable: true,
             maximizable: false,
             resizable: false,
@@ -582,12 +638,23 @@ function createPrefsWindow() {
         prefsWindow.webContents.on('did-finish-load', (e) => {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
-                webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
+                if (webContents.getURL().startsWith(FACEBOOK_URL)) {
+                    webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
                         prefsWindow.webContents.send('dark', res)
-                        // console.log(res)
+                        settings.setSync('prefs-dark', res)
                     })
-                    .catch((e) => console.log(e))
+                    .catch((e) => {
+                        let dark = settings.getSync('prefs-dark') || false
+                        prefsWindow.webContents.send('dark', dark)
+                    })
+                } else {
+                    let dark = settings.getSync('prefs-dark') || false
+                    prefsWindow.webContents.send('dark', dark)
+                }
+            } else {
+                let dark = settings.getSync('prefs-dark') || false
+                prefsWindow.webContents.send('dark', dark)
             }
         })
     }
@@ -802,6 +869,7 @@ function createAppMenu() {
                 label: 'New Facebook Tab',
                 accelerator: 'Cmd+F',
                 visible: titleBarAppearance === '0',
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(FACEBOOK_URL)
@@ -816,6 +884,7 @@ function createAppMenu() {
                 label: 'New Messenger Tab',
                 accelerator: 'Cmd+M',
                 visible: titleBarAppearance === '0',
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(MESSENGER_URL)
@@ -831,6 +900,7 @@ function createAppMenu() {
                 label: 'New Instagram Tab',
                 accelerator: 'Cmd+I',
                 visible: titleBarAppearance === '0',
+                enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     if (mainWindow.isDestroyed()) {
                         createMainWindow(INSTAGRAM_URL)
@@ -844,6 +914,7 @@ function createAppMenu() {
             new MenuItem({
                 label: 'New Blank Tab',
                 accelerator: 'Cmd+T',
+                enabled: titleBarAppearance === '0',
                 visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
                     let window = createBrowserWindow('src/blank.html', undefined, true)
@@ -1348,6 +1419,19 @@ function createTouchBarForWindow(window) {
                             mainWindow = createBrowserWindow(INSTAGRAM_URL)
                         } else {
                             createBrowserWindow(INSTAGRAM_URL)
+                        }
+                    }
+                }),
+                new TouchBar.TouchBarButton({
+                    icon: nativeImage.createFromPath(resolvePath('new_tab')).resize(resizeOptions),
+                    click: () => {
+                        let browserWindow = BrowserWindow.getFocusedWindow()
+                        if (browserWindow && useTab) {
+                            browserWindow.addTabbedWindow(createBrowserWindow('src/blank.html', undefined, true))
+                        } else if (mainWindow.isDestroyed()) {
+                            mainWindow = createBrowserWindow('src/blank.html', undefined, true)
+                        } else {
+                            createBrowserWindow('src/blank.html', undefined, true)
                         }
                     }
                 }),

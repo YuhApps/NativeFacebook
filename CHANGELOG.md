@@ -5,3 +5,6 @@
 * 1.0.3: Visual tweaks.
 * 1.0.8: Better support for Windows and Linux by removing App menu and move some options, such as Settings, to context menu instead.
 * 1.0.9: Improved support for Windows and Linux, and removed the Arrow button in Blank tab. Users can hit Enter/Return to navigate.
+* 1.0.10: Custom title bar for Windows and macOS.
+* 1.0.20: Improved custom title bar.
+* 1.0.30: Bug fixes, improved custom title bar, and TouchBar on MacBook Pros.

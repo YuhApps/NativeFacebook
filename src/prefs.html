@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        ::-webkit-scrollbar {
-            /* display: none; */
-        }
-
         html {
             --fb-color: #1a77f2;
             --warning-color: rgb(255, 59, 48);
@@ -27,6 +23,7 @@
 
         body.dark {
             background: #242526;
+            color-scheme: dark;
         }
         
         header {
@@ -192,6 +189,11 @@
             background: var(--fb-color);
             color: white;
         }
+
+        .dark .pref-button {
+            background: lightgray;
+            color: var(--web-wash-dark);
+        }
         
         .pref-button.warning {
             background: var(--warning-color);
@@ -204,54 +206,35 @@
         }
 
         .dark input[type='radio']:checked {
-            filter: brightness(125%);
+            filter: hue-rotate(30deg) brightness(125%);
         }
     </style>
     <style>
-        .window-close, .window-maximize, .window-unmaximize, .window-minimize {
-            background: black;
-        }
-        .dark .window-close, .dark .window-maximize, .dark .window-unmaximize, .dark .window-minimize, 
-        .black .window-close, .black .window-maximize, .black .window-unmaximize, .black .window-minimize  {
-            background: white;
-        }
-        .dark .window-close.hover, .dark .window-maximize.hover, .dark .window-unmaximize.hover, .dark .window-minimize.hover, 
-        .black .window-close.hover, .black .window-maximize.hover, .black .window-unmaximize.hover, .black .window-minimize.hover {
-            background: black;
-        }
-        .button-wrapper {
+        .window-button {
             background: transparent;
+            border: none;
+            height: 32px;
+            outline: none;
+            width: 48px;
+            -webkit-app-region: no-drag;
         }
-        .button-wrapper.close.hover {
+        .window-button svg path {
+            fill: black;
+        }
+        .window-button.hover svg path {
+            fill: black !important;
+        }
+        .dark .window-button svg path, .black .window-button svg path {
+            fill: white;
+        }
+        .window-button.close.hover {
             background: #ff5e57;
         }
-        .button-wrapper.maximize.hover, .button-wrapper.unmaximize.hover {
+        .window-button.maximize.hover, .window-button.unmaximize.hover {
             background: #28c840;
         }
-        .button-wrapper.minimize.hover {
+        .window-button.minimize.hover {
             background: #ffbe2c;
-        }
-        .hidden {
-            display: none;
-        }
-        .window-close {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-unmaximize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-maximize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-minimize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
         }
     </style>
     <script>
@@ -262,17 +245,23 @@
         const platform = remote.process.platform
     </script>
 </head>
-<body>
+<body class="hidden">
     <header>
         <h3>&nbsp;</h3>
     </header>
     <div class="window-buttons-wrapper hidden">
-        <div class="button-wrapper minimize">
-            <button class="window-button window-minimize" />
-        </div>
-        <div class="button-wrapper close">
-            <button class="window-button window-close" />
-        </div>
+        <button class="window-button minimize"> <!-- min -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+        </button>
+        <button class="window-button maximize hidden"> <!-- max -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+        </button>
+        <button class="window-button unmaximize hidden"> <!-- unmax -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+        </button>
+        <button class="window-button close"> <!-- close -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+        </button>
     </div>
     <div class="pref-wrapper">
         <!-- TitleBar -->
@@ -309,6 +298,17 @@
             <label for="cam-mic-off">No</label><br>
             <input type="radio" id="cam-mic-on" name="cam_mic" value="1">
             <label for="cam-mic-on">Yes</label><br>
+        </div>
+
+        <!-- Scrollbar -->
+        <div class="pref mac tux win">
+            <p class="pref-title">Force dark scroll bar (Requires restart):</p>
+            <input type="radio" id="scrollbar-light" name="scrollbar" value="0" checked>
+            <label for="scrollbar-light">Never</label><br>
+            <input type="radio" id="scrollbar-fb" name="scrollbar" value="1">
+            <label for="scrollbar-fb">Only on Facebook websites (should be used with dark mode)</label><br>
+            <input type="radio" id="scrollbar-dark" name="scrollbar" value="2">
+            <label for="scrollbar-dark">Always</label><br>
         </div>
 
         <!-- Maximize on launch -->
@@ -364,9 +364,7 @@
         const titleBarSettings = settings.getSync('title-bar') || '0'
         if (titleBarSettings === '2' || titleBarSettings === '3') document.body.classList.add('dark')
         
-        if (platform === 'darwin') {
-            document.querySelector('.pref-wrapper').classList.add('mac')
-        } else if (platform === 'win32') {
+        if (platform === 'win32') {
             document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
             let windowButtons = document.querySelectorAll('.window-button')
             windowButtons.forEach((button, index) => {
@@ -382,7 +380,7 @@
                     if (index === 0) currentWindow.minimize()
                     else currentWindow.close()
                 }
-        })
+            })
         }
 
         document.querySelector('h3').textContent = platform === 'darwin' ? 'Preferences' : 'Settings'
@@ -410,9 +408,12 @@
         }
 
         ipcRenderer.on('dark', (e, dark) => {
-            console.log(dark)
-            if (dark) document.body.classList.add('dark')
-            else document.body.classList.remove('dark')
+            if (dark) {
+                document.body.classList.add('dark')
+            } else {
+                document.body.classList.remove('dark')
+            }
+            document.body.classList.remove('hidden')
         })
     </script>
 </body>

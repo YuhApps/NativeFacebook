@@ -1,6 +1,6 @@
 {
     "name": "Facebook",
-    "version": "1.0.20",
+    "version": "1.0.30",
     "description": "A Facebook client for macOS, Windows and Linux",
     "main": "src/app.js",
     "scripts": {
@@ -60,7 +60,7 @@
     "devDependencies": {
         "bufferutil": "4",
         "electron": "^13.6.2",
-        "electron-builder": "^22.13.1",
+        "electron-builder": "^22.14.5",
         "utf-8-validate": "5"
     },
     "postinstall": "electron-builder install-app-deps",

@@ -18,7 +18,11 @@
             background: #ffffff;
             color: #000000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
             vertical-align: middle;
+            white-space: nowrap;
             -webkit-app-region: drag;
         }
         div#main.dark {
@@ -29,21 +33,23 @@
             background: #000000;
             color: #ffffff;
         }
+        div#main span.title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         div#main.mac {
             font-weight: bold;
-            font-size: 12px;
             height: 28px;
-            overflow: hidden;
+            line-height: 28px;
             padding: 0 80px;
             text-align: center;
-            text-overflow: ellipsis;
-            line-height: 28px;
         }
         div#main.win {
             display: flex;
             flex-direction: row;
             height: 32px;
-            font-size: 14px;
             text-align: left;
         }
         div#main.win img {
@@ -52,59 +58,9 @@
             width: 20px;
             -webkit-app-region: no-drag;
         }
-        div#main span.title {
-            flex: 1;
-        }
-        div#main button {
-            cursor: pointer;
+        div#main.win button {
             height: 32px;
             width: 48px;
-        }
-        .window-close, .window-maximize, .window-unmaximize, .window-minimize {
-            background: black;
-        }
-        .dark .window-close, .dark .window-maximize, .dark .window-unmaximize, .dark .window-minimize, 
-        .black .window-close, .black .window-maximize, .black .window-unmaximize, .black .window-minimize  {
-            background: white;
-        }
-        .dark .window-close.hover, .dark .window-maximize.hover, .dark .window-unmaximize.hover, .dark .window-minimize.hover, 
-        .black .window-close.hover, .black .window-maximize.hover, .black .window-unmaximize.hover, .black .window-minimize.hover {
-            background: black;
-        }
-        .button-wrapper {
-            background: transparent;
-            -webkit-app-region: no-drag;
-        }
-        .button-wrapper.close.hover {
-            background: #ff5e57;
-        }
-        .button-wrapper.maximize.hover, .button-wrapper.unmaximize.hover {
-            background: #28c840;
-        }
-        .button-wrapper.minimize.hover {
-            background: #ffbe2c;
-        }
-        .hidden {
-            display: none;
-        }
-        .window-close {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-unmaximize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-maximize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-        }
-        
-        .window-minimize {
-            -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
-            mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 4.399V5.5H0V4.399h11z' fill='%23000'/%3E%3C/svg%3E") no-repeat 50% 50%;
         }
         #resize {
             background: transparent;
@@ -117,24 +73,53 @@
             z-index: 5;
             -webkit-app-region: no-drag;
         }
+        .hidden {
+            display: none;
+        }
+        .window-button {
+            background: transparent;
+            border: none;
+            height: 32px;
+            outline: none;
+            width: 48px;
+            -webkit-app-region: no-drag;
+        }
+        .window-button svg path {
+            fill: black;
+        }
+        .window-button.hover svg path {
+            fill: black !important;
+        }
+        .dark .window-button svg path, .black .window-button svg path {
+            fill: white;
+        }
+        .window-button.close.hover {
+            background: #ff5e57;
+        }
+        .window-button.maximize.hover, .window-button.unmaximize.hover {
+            background: #28c840;
+        }
+        .window-button.minimize.hover {
+            background: #ffbe2c;
+        }
     </style>
 </head>
 <body>
     <div class="" id="main">
         <img src="" alt="">
         <span class="title">Facebook</span>
-        <div class="window-button-wrapper minimize">
-            <button class="window-button window-minimize" />
-        </div>
-        <div class="window-button-wrapper maximize">
-            <button class="window-button window-maximize" />
-        </div>
-        <div class="window-button-wrapper unmaximize">
-            <button class="window button window-unmaximize" />
-        </div>
-        <div class="window-button-wrapper close">
-            <button class="window-button window-close" />
-        </div>
+        <button class="window-button minimize"> <!-- min -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+        </button>
+        <button class="window-button maximize"> <!-- max -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+        </button>
+        <button class="window-button unmaximize"> <!-- unmax -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+        </button>
+        <button class="window-button close"> <!-- close -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+        </button>
     </div>
     <div id="resize"></div>
     <script>
@@ -162,11 +147,9 @@
             buttons.forEach((button) => {
                 button.onmouseenter = (e) => {
                     button.classList.add('hover')
-                    button.parentElement.classList.add('hover')
                 }
                 button.onmouseleave = (e) => {
                     button.classList.remove('hover')
-                    button.parentElement.classList.remove('hover')
                 }
             })
 
@@ -186,7 +169,6 @@
             currentWindow.on('minimize', () => {
                 buttons.forEach((button) => {
                     button.classList.remove('hover')
-                    button.parentElement.classList.remove('hover')
                 })
             })
             currentWindow.on('maximize', () => {
@@ -194,7 +176,6 @@
                 unmaxButton.classList.remove('hidden')
                 buttons.forEach((button) => {
                     button.classList.remove('hover')
-                    button.parentElement.classList.remove('hover')
                 })
             })
             currentWindow.on('unmaximize', () => {
@@ -202,12 +183,11 @@
                 unmaxButton.classList.add('hidden')
                 buttons.forEach((button) => {
                     button.classList.remove('hover')
-                    button.parentElement.classList.remove('hover')
                 })
             })
         } else {
             titleView.classList.add('mac')
-            document.querySelectorAll('.window-button-wrapper').forEach((div) => div.classList.add('hidden'))
+            document.querySelectorAll('.window-button').forEach((button) => button.classList.add('hidden'))
             document.querySelector('img').classList.add('hidden')
             titleView.ondblclick = (e) => {
                 let doubleClickAction = remote.systemPreferences.getUserDefault('AppleActionOnDoubleClick', 'string')
