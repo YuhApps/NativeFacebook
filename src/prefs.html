@@ -12,7 +12,6 @@
             --web-wash-dark: #18191a;
             --fb-nav-dark: #242526;
         }
-
         body {
             background: white;
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
@@ -20,12 +19,10 @@
             padding: 0;
             user-select: none;
         }
-
         body.dark {
             background: #242526;
             color-scheme: dark;
-        }
-        
+        }        
         header {
             background: white;
             color: var(--fb-color);
@@ -38,17 +35,14 @@
             z-index: 20;
             -webkit-app-region: drag
         }
-
         .dark header {
             background: #242526;
             color: white;
-        }
-        
+        }        
         header h3 {
             text-align: center;
             text-transform: uppercase;
         }
-
         .window-buttons-wrapper {
             display: flex;
             flex-direction: row;
@@ -58,23 +52,22 @@
             z-index: 25;
             -webkit-app-region: drag
         }
-
         .button-wrapper button {
             cursor: pointer;
             height: 32px;
             width: 48px;
             -webkit-app-region: no-drag;
-        }
-        
+        }        
         ul {
             list-style: none;
             overflow-y: scroll;
-        }
-        
+        }        
         .hidden {
             display: none;
         }
-
+        .transparent {
+            opacity: 0;
+        }
         .pref-wrapper {
             background: var(--web-wash);
             bottom: 0;
@@ -87,8 +80,7 @@
             padding-top: 20px;
             top: 60px;
             width: 100%;
-        }
-        
+        }        
         .pref-wrapper.mac {
             margin: auto;
             max-width: 1280px;
@@ -98,11 +90,9 @@
             position: relative !important;
             top: 0 !important;
         }
-
         .dark .pref-wrapper {
             background: var(--web-wash-dark);
-        }
-        
+        }        
         .pref {
             background: white;
             border-radius: 4px;
@@ -110,58 +100,47 @@
             margin: 12px 48px;
             padding: 12px 24px;
         }
-
         .dark .pref {
             background: #242526;
             color: white;
-        }
-        
+        }        
         .pref label {
             font-size: 16px;
             margin-bottom: 4px;
         }
-        
         .pref input[type="radio"] {
             margin-bottom: 8px;
             margin-left: 12px;
             margin-right: 20px;
         }
-        
         .pref-title {
             border-bottom: 1px solid var(--fb-color);
             color: var(--fb-color);
             font-size: 16px;
             font-weight: bold;
         }
-
         .dark .pref-title {
             border-bottom: 1px solid lightgrey;
             color: lightgrey;
         }
-        
         .pref-subtitle {
             color: grey;
             font-size: 16px;
             font-style: italic;
         }
-        
         .pref-button-wrapper {
             display: flex;
             flex-direction: row;
         }
-        
         .pref-button-wrapper .pref-button {
             flex: 1;
         }
-        
         .pref-button-wrapper .pref-button.flex-double {
             flex: 2;
         }
-        
         .pref-button-wrapper .pref-button-spacer {
             width: 16px;
         }
-        
         .pref-button {
             border: none;
             border-radius: 4px;
@@ -174,42 +153,33 @@
             text-transform: uppercase;
             transition-duration: 0.25s;
         }
-        
         .pref-button.white {
             background: white;
             color: var(--fb-color);
         }
-        
         .pref-button.white:active {
             background: #e8e8e8;
             color: var(--fb-color);
         }
-        
         .pref-button.primary {
             background: var(--fb-color);
             color: white;
         }
-
         .dark .pref-button {
             background: lightgray;
             color: var(--web-wash-dark);
         }
-        
         .pref-button.warning {
             background: var(--warning-color);
             color: white;
         }
-        
         .pref-button.warning:active {
             background: var(--warning-color-pressed);
             color: white;
         }
-
         .dark input[type='radio']:checked {
             filter: hue-rotate(30deg) brightness(125%);
         }
-    </style>
-    <style>
         .window-button {
             background: transparent;
             border: none;
@@ -236,16 +206,25 @@
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
+        #app-version {
+            color: var(--fb-color);
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .dark #app-version {
+            color: lightgrey;
+        }
     </style>
     <script>
-        const { app, remote, ipcRenderer } = require('electron')
+        const { remote, ipcRenderer } = require('electron')
         const settings = require('electron-settings')
         const currentWindow = remote.getCurrentWindow()
         const currentWebContents = remote.getCurrentWebContents()
         const platform = remote.process.platform
     </script>
 </head>
-<body class="hidden">
+<body class="transparent">
     <header>
         <h3>&nbsp;</h3>
     </header>
@@ -357,12 +336,20 @@
             </div>
         </div>
 
+        <div class="pref mac tux win">
+            <p class="pref-title">About</p>
+            <p class="pref-subtitle">Facebook Unofficial, <span id="app-version"></span>.</p>
+        </div>
+
     </div>
 
     <script>
+        const body = document.body
         const prefButtons = document.querySelectorAll('.pref-button')
+        const appVersion = document.querySelector('#app-version')
         const titleBarSettings = settings.getSync('title-bar') || '0'
-        if (titleBarSettings === '2' || titleBarSettings === '3') document.body.classList.add('dark')
+
+        appVersion.textContent = remote.app.getVersion()
         
         if (platform === 'win32') {
             document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
@@ -399,6 +386,14 @@
                 settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
             })
         })
+        body.onclick = (e) => {
+            if (e.target.tagName !== 'button') {
+                body.classList.remove('transparent')
+                if ((settings.getSync('prefs-dark') || false) === true) {
+                    body.classList.add('dark')   
+                }
+            }
+        }
         prefButtons[0].onclick = (e) => {
             currentWebContents.clearHistory()
             currentWebContents.session.clearCache()
@@ -407,14 +402,17 @@
             currentWebContents.session.clearStorageData().then(window.close)
         }
 
-        ipcRenderer.on('dark', (e, dark) => {
+        ipcRenderer.on('dark', (e, dark, version) => {
             if (dark) {
                 document.body.classList.add('dark')
             } else {
                 document.body.classList.remove('dark')
             }
-            document.body.classList.remove('hidden')
+            document.body.classList.remove('transparent')
+            appVersion.textContent = ' ' + version
+            appVersion.onclick = (e) => ipcRenderer.send('open-about')
         })
+        // currentWebContents.openDevTools()
     </script>
 </body>
 

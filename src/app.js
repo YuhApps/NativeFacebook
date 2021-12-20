@@ -3,9 +3,10 @@ const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
 const path = require('path')
+const { version } = require('typescript')
 const validUrlUtf8 = require('valid-url-utf8')
 
-const BUILD_DATE = '2021.12.05'
+const BUILD_DATE = '2021.12.20'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
@@ -132,8 +133,37 @@ powerMonitor.on('on-ac', () => {
 })
 
 powerMonitor.on('resume', (event) => {
-    
+    if (process.platform !== 'darwin') return
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+        webContents.reload()
+        app.hide()
+    }
 })
+
+// Handle app context menu invoke on Windows
+ipcMain.on('app-context-menu', () => {
+    let menu = new Menu()
+    menu.append(new MenuItem({
+        label: 'Settings',
+        click: createPrefsWindow,
+    }))
+    menu.append(new MenuItem({ type: 'separator' }))
+    menu.append(new MenuItem({
+        label: 'About Facebook',
+        click: () => createAboutWindow()
+    }))
+    menu.popup({
+        window: BrowserWindow.getFocusedWindow(),
+        x: 12,
+        y: 4
+    })
+})
+ipcMain.on('create-new-window', () => {
+    console.log('create-new-window')
+    createBrowserWindowWithCustomTitleBar('src/blank.html', undefined, true)
+})
+ipcMain.on('open-about', () => createAboutWindow())
 
 /** End of Basic Electron app events. */
 
@@ -386,7 +416,6 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         }
     })
     titleView.setAutoResize({ x: true, y: true, horizontal: true, vertical: false })
-    titleView.setBackgroundColor(titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000')
     window.addBrowserView(titleView)
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
     // Main content
@@ -400,7 +429,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         }
     })
     mainView.setAutoResize({ x: false, y: false, width: true, height: true })
-    mainView.setBackgroundColor(titleBarAppearance === 'dark' ? '#242526' : '#ffffff')
+    mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
     window.addBrowserView(mainView)
     mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     // Load URL or File
@@ -447,7 +476,18 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         event.preventDefault()
         createBrowserWindow(url)
     })
+    mainView.webContents.on('enter-html-full-screen', () => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
+        mainView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: window.getBounds().height })
+    })
+    mainView.webContents.on('leave-html-full-screen', () => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+    })
     
+    window.on('leave-full-screen', () => {
+        mainView.webContents.executeJavaScript('document.exitFullscreen()')
+    })
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
@@ -474,24 +514,6 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
             window.removeBrowserView(titleView)
             window.removeBrowserView(mainView)
         }
-    })
-    // Handle app context menu invoke on Windows
-    ipcMain.on('app-context-menu', () => {
-        let menu = new Menu()
-        menu.append(new MenuItem({
-            label: 'Settings',
-            click: createPrefsWindow,
-        }))
-        menu.append(new MenuItem({ type: 'separator' }))
-        menu.append(new MenuItem({
-            label: 'About Facebook',
-            role: 'about'
-        }))
-        menu.popup({
-            window: window,
-            x: 12,
-            y: 4
-        })
     })
     return window
 }
@@ -555,7 +577,7 @@ function createAboutWindow() {
         aboutWindow.show()
     } else {
         let s = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getBounds() : screen.getPrimaryDisplay().workAreaSize
-        let x = s.width / 2 - 360
+        let x = Math.round(s.width / 2 - 360)
         let y = 120
         aboutWindow = new BrowserWindow({
             height: 240,
@@ -568,7 +590,7 @@ function createAboutWindow() {
             maximizable: false,
             minimizable: false,
             resizable: false,
-            titleBarStyle: 'hidden',
+            titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             useContentSize: true,
             webPreferences: {
                 contextIsolation: false,
@@ -579,6 +601,29 @@ function createAboutWindow() {
         })
         aboutWindow.loadFile('src/about.html')
         aboutWindow.on('close', () => aboutWindow = null)
+        aboutWindow.webContents.on('did-finish-load', (e) => {
+            let version = app.getVersion() + ' (' + BUILD_DATE + ')'
+            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+                if (webContents.getURL().startsWith(FACEBOOK_URL)) {
+                    webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
+                    .then((res) => {
+                        aboutWindow.webContents.send('dark', res, version)
+                        settings.setSync('prefs-dark', res)
+                    })
+                    .catch((e) => {
+                        let dark = settings.getSync('prefs-dark') || false
+                        aboutWindow.webContents.send('dark', dark, version)
+                    })
+                } else {
+                    let dark = settings.getSync('prefs-dark') || false
+                    aboutWindow.webContents.send('dark', dark, version)
+                }
+            } else {
+                let dark = settings.getSync('prefs-dark') || false
+                aboutWindow.webContents.send('dark', dark, version)
+            }
+        })
     }
 }
 
@@ -592,7 +637,7 @@ function createPrefsWindow() {
         prefsWindow.show()
     } else {
         let s = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getBounds() : screen.getPrimaryDisplay().workAreaSize
-        let x = s.width / 2 - 400
+        let x = Math.round(s.width / 2 - 400)
         let y = 120
         prefsWindow = new BrowserWindow({
             x: x,
@@ -632,29 +677,30 @@ function createPrefsWindow() {
             let t = settings.getSync('title-bar') || '0'
             if (t !== titleBarAppearance) {
                 app.relaunch()
-                app.quit()
+                setTimeout(app.quit, 500)
             }
         })
         prefsWindow.webContents.on('did-finish-load', (e) => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
+            let version = app.getVersion() + ' (' + BUILD_DATE + ')'
+            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
                 let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
-                        prefsWindow.webContents.send('dark', res)
+                        prefsWindow.webContents.send('dark', res, version)
                         settings.setSync('prefs-dark', res)
                     })
                     .catch((e) => {
                         let dark = settings.getSync('prefs-dark') || false
-                        prefsWindow.webContents.send('dark', dark)
+                        prefsWindow.webContents.send('dark', dark, version)
                     })
                 } else {
                     let dark = settings.getSync('prefs-dark') || false
-                    prefsWindow.webContents.send('dark', dark)
+                    prefsWindow.webContents.send('dark', dark, version)
                 }
             } else {
                 let dark = settings.getSync('prefs-dark') || false
-                prefsWindow.webContents.send('dark', dark)
+                prefsWindow.webContents.send('dark', dark, version)
             }
         })
     }
@@ -715,7 +761,7 @@ function createAppMenu() {
         submenu: [
             new MenuItem({
                 label: 'About Facebook',
-                role: 'about'
+                click: createAboutWindow
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
@@ -1097,7 +1143,11 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             id: 'google-search',
             label: 'Search with Google',
             click: (menuItem, browserWindow, event) => {
-                browserWindow.addTabbedWindow(createBrowserWindow('https://www.google.com/search?q=' + selectionText))
+                if (titleBarAppearance === '0') {
+                    browserWindow.addTabbedWindow(createBrowserWindow('https://www.google.com/search?q=' + selectionText))
+                } else {
+                    createBrowserWindow('https://www.google.com/search?q=' + selectionText)
+                }
             }
         }))
         menu.append(new MenuItem({

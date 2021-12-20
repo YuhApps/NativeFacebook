@@ -5,9 +5,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        ::-webkit-scrollbar {
-            display: none;
-        }
         body {
             margin: 0;
             padding: 0;
@@ -33,6 +30,9 @@
             background: #000000;
             color: #ffffff;
         }
+        div#main.dark svg, div#main.black svg {
+            fill: #ffffff;
+        }
         div#main span.title {
             flex: 1;
             overflow: hidden;
@@ -40,11 +40,18 @@
             white-space: nowrap;
         }
         div#main.mac {
+            display: flex;
             font-weight: bold;
             height: 28px;
             line-height: 28px;
             padding: 0 80px;
             text-align: center;
+        }
+        div#main.mac img {
+            display: none;
+        }
+        div#main.mac .window-button {
+            display: none;
         }
         div#main.win {
             display: flex;
@@ -102,23 +109,29 @@
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
+        .window-button.new-tab.hover {
+            background: #36c0ff;
+        }
     </style>
 </head>
 <body>
     <div class="" id="main">
-        <img src="" alt="">
+        <img alt="">
         <span class="title">Facebook</span>
+        <button class="window-button new-tab">
+            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><path d="M11,8.708l-1.375,0l0,-1.375l-0.917,0l0,1.375l-1.375,0l0,0.917l1.375,0l0,1.375l0.917,0l0,-1.375l1.375,0l0,-0.917Zm0,-8.708l0,6.417l-0.917,-0l0,-3.667l-9.166,0l-0,7.333l5.5,0l-0,0.917l-6.417,0l0,-11l11,0Z"/></svg>
+        </button>
         <button class="window-button minimize"> <!-- min -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z'/></svg>
         </button>
         <button class="window-button maximize"> <!-- max -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z'/></svg>
         </button>
         <button class="window-button unmaximize"> <!-- unmax -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z'/></svg>
         </button>
         <button class="window-button close"> <!-- close -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z'/></svg>
         </button>
     </div>
     <div id="resize"></div>
@@ -130,21 +143,23 @@
         let titleText = document.querySelector('div span')
         let max = settings.getSync('max') || '0'
         let titleBarSettings = settings.getSync('title-bar') || '0'
-        let buttons = document.querySelectorAll('button')
-        let minButton = buttons[0]
-        let maxButton = buttons[1]
-        let unmaxButton = buttons[2]
-        let closeButton = buttons[3]
+        let windowButtons = document.querySelectorAll('.window-button')
+        let newTabButton = windowButtons[0]
+        let minButton = windowButtons[1]
+        let maxButton = windowButtons[2]
+        let unmaxButton = windowButtons[3]
+        let closeButton = windowButtons[4]
         let currentWindow = remote.getCurrentWindow()
 
         if (titleBarSettings === '2') titleView.classList.add('dark')
         else if (titleBarSettings === '3') titleView.classList.add('black')
+        console.log(platform)
         if (platform === 'win32') {
             titleView.classList.add('win')
             let img = document.querySelector('img')
             img.src = 'assets/facebook.png'
             img.onclick = (e) => ipcRenderer.send('app-context-menu')
-            buttons.forEach((button) => {
+            windowButtons.forEach((button) => {
                 button.onmouseenter = (e) => {
                     button.classList.add('hover')
                 }
@@ -165,30 +180,29 @@
             maxButton.onclick = (e) => currentWindow.maximize()
             unmaxButton.onclick = (e) => currentWindow.unmaximize()
             minButton.onclick = (e) => currentWindow.minimize()
+            newTabButton.onclick = (e) => ipcRenderer.send('create-new-window')
 
             currentWindow.on('minimize', () => {
-                buttons.forEach((button) => {
+                windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
             })
             currentWindow.on('maximize', () => {
                 maxButton.classList.add('hidden')
                 unmaxButton.classList.remove('hidden')
-                buttons.forEach((button) => {
+                windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
             })
             currentWindow.on('unmaximize', () => {
                 maxButton.classList.remove('hidden')
                 unmaxButton.classList.add('hidden')
-                buttons.forEach((button) => {
+                windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
             })
         } else {
             titleView.classList.add('mac')
-            document.querySelectorAll('.window-button').forEach((button) => button.classList.add('hidden'))
-            document.querySelector('img').classList.add('hidden')
             titleView.ondblclick = (e) => {
                 let doubleClickAction = remote.systemPreferences.getUserDefault('AppleActionOnDoubleClick', 'string')
                 if (doubleClickAction === 'None' ) {

@@ -6,41 +6,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Facebook</title>
     <style>
+        html {
+            --fb-color: #1a77f2;
+            --warning-color: rgb(255, 59, 48);
+            --warning-color-pressed: rgb(199, 49, 42);
+            --web-wash: rgb(240, 242, 245);
+            --web-wash-dark: #18191a;
+            --fb-nav-dark: #242526;
+        }
         body {
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
             height: 100%;
             margin: 0;
             padding: 20px;
             user-select: none;
-            --fb-color: #1a77f2;
-            -webkit-app-region: drag;
         }
-        
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
-        strong {
+        body.dark {
+            background: #242526;
+            color: white;
+            color-scheme: dark;
+        }
+        h1, h2, h3, h4, h5, h6, strong {
             color: var(--fb-color);
         }
-        
+        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6, .dark strong {
+            color: lightgrey
+        }
+        .hidden {
+            display: none;
+        }
         #wrapper {
             display: flex;
             flex-direction: row;
             vertical-align: middle;
         }
-        
         #wrapper img {
             align-self: center;
             height: 160px;
             margin-right: 20px;
             vertical-align: middle;
-        }
-        
+        }        
         #wrapper div {
             vertical-align: middle;
+        }
+        .window-buttons-wrapper {
+            display: flex;
+            position: fixed;
+            right: 0;
+            top: 0;
+        }
+        .window-button {
+            background: transparent;
+            border: none;
+            height: 32px;
+            outline: none;
+            width: 48px;
+            -webkit-app-region: no-drag;
+        }
+        .window-button svg path {
+            fill: black;
+        }
+        .window-button.hover svg path {
+            fill: black !important;
+        }
+        .dark .window-button svg path, .black .window-button svg path {
+            fill: white;
+        }
+        .window-button.close.hover {
+            background: #ff5e57;
+        }
+        .window-button.maximize.hover, .window-button.unmaximize.hover {
+            background: #28c840;
+        }
+        .window-button.minimize.hover {
+            background: #ffbe2c;
+        }
+        #app-version {
+            color: var(--fb-color);
+            font-weight: bold;
+        }
+        .dark #app-version {
+            color: lightgrey;
         }
     </style>
 </head>
@@ -49,18 +95,53 @@
     <div id="wrapper">
         <img src="assets/facebook.png" alt="Facebook logo">
         <div>
-            <h3>Facebook (unofficial)</h3>
-            <p>Version <span></span></p>
+            <h3>Facebook (Unofficial)</h3>
+            <p>Version <span id="app-version"></span></p>
             <p>Developed by <strong>YUH APPS</strong>. Made with <strong>Electron by GitHub</strong>. "Facebook" is a registered trademark of Facebook, Inc.</p>
             <p>© 2021 YUH APPS. All rights reserved.</p>
         </div>
     </div>
+    <div class="window-buttons-wrapper hidden">
+        <button class="window-button minimize hidden"> <!-- min -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+        </button>
+        <button class="window-button maximize hidden"> <!-- max -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+        </button>
+        <button class="window-button unmaximize hidden"> <!-- unmax -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+        </button>
+        <button class="window-button close hidden"> <!-- close -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+        </button>
+    </div>
     <script>
-        let {
-            app
-        } = require('electron').remote
-        let span = document.querySelector('span')
-        span.textContent = app.getVersion()
+        const { remote, ipcRenderer } = require('electron')
+        const currentWindow = remote.getCurrentWindow()
+        const isWindows = remote.process.platform === 'win32'
+        const button = document.querySelector('.window-button.close')
+        const appVersion = document.querySelector('#app-version')
+
+        if (isWindows) {
+            button.classList.remove('hidden')
+            button.parentElement.classList.remove('hidden')
+            button.onmouseenter = (e) => {
+                button.classList.add('hover')
+            }
+            button.onmouseleave = (e) => {
+                button.classList.remove('hover')
+            }
+            button.onclick = (e) => {
+                currentWindow.close()
+            }
+        }
+
+        appVersion.textContent = remote.app.getVersion()
+
+        ipcRenderer.on('dark', (e, dark, version) => {
+            if (dark) document.body.classList.add('dark')
+            appVersion.textContent = version
+        })
     </script>
 </body>
 
