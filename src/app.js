@@ -1,12 +1,14 @@
-const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar } = require('electron')
+const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar, webContents } = require('electron')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
 const settings = require('electron-settings')
 const { platform } = require('os')
 const path = require('path')
 const { version } = require('typescript')
 const validUrlUtf8 = require('valid-url-utf8')
+const fs = require('fs')
 
-const BUILD_DATE = '2021.12.20'
+const BUILD_DATE = '2021.12.31'
+const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
@@ -40,7 +42,7 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
     + '.p7hjln8o.kvgmc6g5.cxmmr5t8.oygrvhab.hcukyx3x.jb3vyjys.rz4wbd8a.qt6c0cv9.a8nywdso.i1ao9s8h.esuyzwwr.f1sip0of.lzcic4wl.n00je7tq.'
     + 'arfg74bv.qs9ysxi8.k77z8yql.l9j0dhe7.abiwlrkh.p8dawk7l.bp9cbjyn.cbu4d94t.datstx6m.taijpn5t.k4urcfbm").click()'
 
-let aboutWindow, downloadsWindow, mainWindow, prefsWindow, ongoingDownloads = []
+let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
 
 /** Basic Electron app events: */
@@ -48,6 +50,8 @@ let titleBarAppearance, forceDarkScrollbar
 app.whenReady().then(() => {
     titleBarAppearance = settings.getSync('title-bar') || '0'
     forceDarkScrollbar = settings.getSync('scrollbar') || '0'
+    global.recentDownloads = [] 
+    global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
     let mw = createMainWindow()
     if (process.platform === 'darwin') {
@@ -93,6 +97,8 @@ app.setAboutPanelOptions({
 })
 
 app.on('before-quit', (event) => {
+    let downloads = [...global.recentDownloads.filter((item) => item.getState() === 'completed'), ...global.previousDownloads]
+    fs.writeFileSync(DOWNLOADS_JSON_PATH, JSON.stringify(downloads))
     askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient())
     app.exit(0)
 })
@@ -159,10 +165,47 @@ ipcMain.on('app-context-menu', () => {
         y: 4
     })
 })
+
 ipcMain.on('create-new-window', () => {
     console.log('create-new-window')
     createBrowserWindowWithCustomTitleBar('src/blank.html', undefined, true)
 })
+
+ipcMain.on('delete-download-item', (event, id) => {
+    global.previousDownloads = global.previousDownloads.filter((d) => d.id !== id)
+    global.recentDownloads = global.recentDownloads.filter((d) => d.id !== id)
+})
+
+ipcMain.on('cancel-download-item', (event, id, state) => {
+    global.previousDownloads = global.previousDownloads.filter((d) => d.id !== id)
+    global.recentDownloads = global.recentDownloads.filter((d) => d.id !== id)
+    global.recentDownloads = global.recentDownloads.filter((d, i, a) => d.getState() !== 'cancelled')
+    // global.recentDownloads = global.recentDownloads.filter((d, i, a) => a.indexOf(d) === i)
+})
+
+ipcMain.on('re-download-file', (event, id, url) => {
+    global.recentDownloads = global.recentDownloads.filter((d) => d.id !== id)
+    global.previousDownloads = global.previousDownloads.filter((d) => d.id !== id)
+    downloadsWindow.webContents.downloadURL(url)
+})
+
+ipcMain.on('show-download-item-in-files', (event, savePath) => {
+    if (fs.existsSync(savePath)) {
+        downloadsWindow.minimize()
+        shell.showItemInFolder(savePath)
+    }
+})
+
+ipcMain.on('delete-all-recent-downloads', (event) => {
+    global.recentDownloads.forEach((d) => d.cancel())
+    global.recentDownloads = []
+})
+
+ipcMain.on('delete-all-previous-downloads', (event) => {
+    global.previousDownloads = []
+    fs.writeFileSync(DOWNLOADS_JSON_PATH, JSON.stringify([]))
+})
+
 ipcMain.on('open-about', () => createAboutWindow())
 
 /** End of Basic Electron app events. */
@@ -342,16 +385,7 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
         }
     }))
     window.webContents.session.on('will-download', (event, item, webContents) => {
-        item['id'] = Date.now()
-        ongoingDownloads.splice(0, 0, item)
-        item.once('done', (event, state) => {
-            if (state === 'completed') {
-                let downloadItems = settings.getSync('downloads') || []
-                item.fileName = item.getFilename()
-                settings.setSync('downloads', [item, ...downloadItems])
-                ongoingDownloads = ongoingDownloads.filter((d) => d.id !== item.id)
-            }
-        })
+        handleDownload(item, webContents)
     })
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
@@ -484,7 +518,9 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
         mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
-    
+    mainView.webContents.session.on('will-download', (event, item, webContents) => {
+        handleDownload(item, webContents)
+    })
     window.on('leave-full-screen', () => {
         mainView.webContents.executeJavaScript('document.exitFullscreen()')
     })
@@ -516,6 +552,13 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         }
     })
     return window
+}
+
+function handleDownload(item, webContents) {
+    item['id'] = `${item.getStartTime()}`
+    item['url'] = item.getURL()
+    item['startTime'] = item.getStartTime()
+    global.recentDownloads = [item, ...global.recentDownloads]
 }
 
 /**
@@ -600,6 +643,7 @@ function createAboutWindow() {
             }
         })
         aboutWindow.loadFile('src/about.html')
+        aboutWindow.setTitle('About Facebook (Unofficial)')
         aboutWindow.on('close', () => aboutWindow = null)
         aboutWindow.webContents.on('did-finish-load', (e) => {
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
@@ -651,7 +695,7 @@ function createPrefsWindow() {
             titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
-                tabbingIdentifier: "Prefs",
+                tabbingIdentifier: 'Prefs',
                 scrollBounce: titleBarAppearance === '0',
                 plugins: true,
                 nodeIntegration: true,
@@ -661,6 +705,7 @@ function createPrefsWindow() {
             },
         })
         prefsWindow.loadFile('src/prefs.html')
+        prefsWindow.setTitle(process.platform === 'darwin' ? 'Preferences' : 'Settings')
         prefsWindow.on('close', () => {
             let dev = settings.getSync('dev') || '0'
             let pip = settings.getSync('pip') || '0'
@@ -723,10 +768,11 @@ function createDownloadsWindow() {
             focusable: true,
             frame: false,
             maximizable: false,
-            titleBarStyle: 'hidden',
+            minimizable: true,
+            titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
-                tabbingIdentifier: "Prefs",
+                tabbingIdentifier: 'Downloads',
                 plugins: true,
                 nodeIntegration: true,
                 enableRemoteModule: true,
@@ -735,7 +781,36 @@ function createDownloadsWindow() {
             },
         })
         downloadsWindow.loadFile('src/downloads.html')
-        downloadsWindow.on('closed', () => downloadsWindow = null)
+        downloadsWindow.setTitle('Downloads')
+        downloadsWindow.on('closed', () => {
+            downloadsWindow = null
+        })
+        downloadsWindow.webContents.on('did-finish-load', (e) => {
+            let version = app.getVersion() + ' (' + BUILD_DATE + ')'
+            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+                if (webContents.getURL().startsWith(FACEBOOK_URL)) {
+                    webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
+                    .then((res) => {
+                        downloadsWindow.webContents.send('dark', res, version)
+                        settings.setSync('prefs-dark', res)
+                    })
+                    .catch((e) => {
+                        let dark = settings.getSync('prefs-dark') || false
+                        downloadsWindow.webContents.send('dark', dark, version)
+                    })
+                } else {
+                    let dark = settings.getSync('prefs-dark') || false
+                    downloadsWindow.webContents.send('dark', dark, version)
+                }
+            } else {
+                let dark = settings.getSync('prefs-dark') || false
+                downloadsWindow.webContents.send('dark', dark, version)
+            }
+        })
+        downloadsWindow.webContents.session.on('will-download', (event, item, webContents) => {
+            handleDownload(item, webContents)
+        })
     }
 }
 
@@ -983,8 +1058,19 @@ function createAppMenu() {
                 },
             }),
             new MenuItem({
-                type: "separator",
-            }), new MenuItem({
+                type: 'separator',
+            }),
+            new MenuItem({
+                label: 'Downloads',
+                accelerator: 'Cmd+Shift+J',
+                click: (item, window, event) => {
+                    createDownloadsWindow()
+                }
+            }),
+            new MenuItem({
+                type: 'separator',
+            }),
+            new MenuItem({
                 role: 'close',
             }),
         ],
@@ -1013,15 +1099,19 @@ function createAppMenu() {
                     }
                 }
             }),
-            new MenuItem({
-                label: 'View Downloads',
-                id: 'downloads',
+            new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
+            new MenuItem({ 
+                id: 'dev-tools',
+                label: 'Toggle Developer Tools',
                 click: (menuItem, browserWindow, event) => {
-                    createDownloadsWindow()
+                    let window = BrowserWindow.getFocusedWindow()
+                    if (!window) return
+                    let browserViews = window.getBrowserViews()
+                    let webContents = browserViews !== null && browserViews.length > 1 ? browserViews[1].webContents : window.webContents
+                    if (webContents.isDevToolsOpened()) webContents.closeDevTools() 
+                    else                                webContents.openDevTools()
                 }
             }),
-            new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
-            new MenuItem({ id: 'dev-tools', role: 'toggleDevTools' }),
         ]
     })
 
@@ -1335,6 +1425,13 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
                 }
             },
         }))
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+            label: 'Downloads',
+            click: (item, window, event) => {
+                createDownloadsWindow()
+            }
+        }),)
         menu.append(new MenuItem({
             label: 'Toggle Picture in Picture',
             id: 'pip',

@@ -1,192 +1,470 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Downloads</title>
-  <style>
-    body {
-      font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      --fb-color: #1a77f2;
-      --warning-color: rgb(255, 59, 48);
-      --warning-color-pressed: rgb(199, 49, 42);
-    }
-
-    header {
-      background: var(--fb-color);
-      color: white;
-      box-shadow: 1px 1px 2px 4px rgba(0.5, 0.5, 0.5, 0.1);
-      margin: 0;
-      left: 0;
-      padding: 8px 12px;
-      position: fixed;
-      right: 0;
-      top: 0;
-      -webkit-app-region: drag
-    }
-
-    header h3 {
-      text-align: center;
-      text-transform: uppercase;
-    }
-
-    ul {
-      list-style: none;
-    }
-
-    .hidden {
-      visibility: hidden;
-    }
-
-    .download-wrapper {
-      margin: auto;
-      max-width: 1280px;
-      padding-bottom: 20px;
-      padding-top: 80px;
-      width: 100%;
-    }
-
-    ul {
-      margin: 0;
-      padding: 0;
-    }
-
-    li {
-      background: white;
-      box-shadow: 1px 1px 1px 2px rgba(0.5, 0.5, 0.5, 0.1);
-      display: flex;
-      flex-direction: row;
-      list-style: none;
-      margin: 12px 48px;
-      padding: 12px 24px;
-    }
-
-    li .item {
-      flex: 1;
-      overflow: hidden;
-    }
-
-    li .item .item-title {
-      color: black;
-      font-size: 1rem;
-      font-weight: bold;
-      padding: 4px;
-    }
-
-    li .item .item-subtitle {
-      color: grey;
-      font-size: 1rem;
-      padding: 4px;
-    }
-
-    li .separator {
-      height: 4px;
-      width: 12px;
-    }
-
-    li svg {
-      border-radius: 50%;
-      color: grey;
-      cursor: pointer;
-      padding: 8px;
-      transition-duration: 0.5s;
-    }
-
-    li svg path {
-      fill: grey;
-    }
-
-    li svg:hover {
-      background: #80808020;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html {
+            --fb-color: #1a77f2;
+            --warning-color: rgb(255, 59, 48);
+            --warning-color-pressed: rgb(199, 49, 42);
+            --web-wash: rgb(240, 242, 245);
+            --web-wash-dark: #18191a;
+            --fb-nav-dark: #242526;
+        }
+        body {
+            background: white;
+            font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body.dark {
+            background: #242526;
+            color-scheme: dark;
+        }        
+        header {
+            background: white;
+            color: var(--fb-color);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            margin: 0;
+            left: 0;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 20;
+            -webkit-app-region: drag
+        }
+        .dark header {
+            background: #242526;
+            color: white;
+        }        
+        header h3 {
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .window-buttons-wrapper {
+            display: flex;
+            flex-direction: row;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 25;
+            -webkit-app-region: drag
+        }
+        .button-wrapper button {
+            cursor: pointer;
+            height: 32px;
+            width: 48px;
+            -webkit-app-region: no-drag;
+        }        
+        ul {
+            list-style: none;
+            overflow-y: scroll;
+        }        
+        .hidden {
+            display: none;
+        }
+        .transparent {
+            opacity: 0;
+        }
+        .download-wrapper {
+            background: var(--web-wash);
+            bottom: 0;
+            left: 0;
+            margin: auto;
+            max-width: 1280px;
+            overflow-y: scroll;
+            position: fixed;
+            padding-bottom: 20px;
+            padding-top: 20px;
+            top: 60px;
+            width: 100%;
+        }
+        .dark .download-wrapper {
+            background: var(--web-wash-dark);
+        }
+        .section-title {
+            align-items: center;
+            color: var(--fb-color);
+            display: flex;
+            flex-direction: row;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: .25px;
+            margin: 24px 48px 0px;
+            padding: 0px 16px;
+        }
+        .dark .section-title {
+            color: #d3d3d3;
+        }
+        .section-title span {
+            flex: 1;
+        }
+        .section-title button {
+            background: none;
+            border: none;
+            border-radius: 12.5%;
+            cursor: pointer;
+            height: 24px;
+            outline: none;
+            padding: 4px;
+            width: 24px;
+        }
+        .section-title svg path {
+            fill: var(--fb-color);
+        }
+        .dark .section-title svg path {
+            fill: #d3d3d3;
+        }
+        .download-item {
+            align-items: center;
+            background: white;
+            border: 1px solid lightgrey;
+            border-radius: 8px;
+            /* box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); */
+            display: flex;
+            font-size: 14px;
+            flex-direction: row;
+            gap: 8px;
+            margin: 12px 48px;
+            padding: 8px 16px;
+            vertical-align: middle;
+        }
+        .dark .download-item {
+            background: #242526;
+            border: 1px solid #646566;
+            color: white;
+        }
+        .download-item .deleted {
+            text-decoration: line-through;
+        }
+        .download-item span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .download-item span.file-name {
+            flex: 1;
+            margin-right: 8px;
+        }
+        .download-item span.progress {
+            color: grey;
+            margin: 0 8px;
+        }
+        .download-item button {
+            background: none;
+            border: none;
+            border-radius: 12.5%;
+            cursor: pointer;
+            height: 24px;
+            outline: none;
+            padding: 4px;
+            vertical-align: middle;
+            width: 24px;
+        }
+        .download-item svg path {
+            fill: #000;
+        }
+        .dark .download-item svg path {
+            fill: #fff;
+        }
+        .no-downloads {
+            color: gray;
+            font-size: 14px;
+            padding: 12px 24px;
+            text-align: center;
+        }
+        .dark .no-downloads {
+            color: lightgray;
+        }
+        .window-button {
+            background: transparent;
+            border: none;
+            height: 32px;
+            outline: none;
+            width: 48px;
+            -webkit-app-region: no-drag;
+        }
+        .window-button svg path {
+            fill: black;
+        }
+        .window-button.hover svg path {
+            fill: black !important;
+        }
+        .dark .window-button svg path, .black .window-button svg path {
+            fill: white;
+        }
+        .window-button.close.hover {
+            background: #ff5e57;
+        }
+        .window-button.maximize.hover, .window-button.unmaximize.hover {
+            background: #28c840;
+        }
+        .window-button.minimize.hover {
+            background: #ffbe2c;
+        }
+        #app-version {
+            color: var(--fb-color);
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .dark #app-version {
+            color: lightgrey;
+        }
+    </style>
+    <script>
+        const { remote, ipcRenderer } = require('electron')
+        const settings = require('electron-settings')
+        const currentWindow = remote.getCurrentWindow()
+        const currentWebContents = remote.getCurrentWebContents()
+        const platform = remote.process.platform
+        const separator = platform === 'win32' ? '\\' : '/'
+        const fs = remote.require('fs')
+    </script>
 </head>
-<body>
-  <header>
-    <h3>Downloads</h3>
-  </header>
-  <div class="download-wrapper">
-    <ul id="downloads">
-      <li>
-        <span class="item">
-          <span class="item-title">Title</span>
-          <br>
-          <span class="item-subtitle">Subtitle</span>
-        </span>
-        <span class="separator"></span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path d="M23 20.168l-8.185-8.187 8.185-8.174-2.832-2.807-8.182 8.179-8.176-8.179-2.81 2.81 8.186 8.196-8.186 8.184 2.81 2.81 8.203-8.192 8.18 8.192z"/></svg>
-      </li>
-    </ul>
-  </div>
+<body class="">
+    <header>
+        <h3>&nbsp;</h3>
+    </header>
+    <div class="window-buttons-wrapper hidden">
+        <button class="window-button minimize hidden"> <!-- min -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+        </button>
+        <button class="window-button maximize hidden"> <!-- max -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+        </button>
+        <button class="window-button unmaximize hidden"> <!-- unmax -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+        </button>
+        <button class="window-button close"> <!-- close -->
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+        </button>
+    </div>
+    <div class="download-wrapper">
+        <div class="section-title">
+          <span>Current session</span>
+          <button id="recent-downloads-delete">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M19 24h-14c-1.104 0-2-.896-2-2v-17h-1v-2h6v-1.5c0-.827.673-1.5 1.5-1.5h5c.825 0 1.5.671 1.5 1.5v1.5h6v2h-1v17c0 1.104-.896 2-2 2zm0-19h-14v16.5c0 .276.224.5.5.5h13c.276 0 .5-.224.5-.5v-16.5zm-9 4c0-.552-.448-1-1-1s-1 .448-1 1v9c0 .552.448 1 1 1s1-.448 1-1v-9zm6 0c0-.552-.448-1-1-1s-1 .448-1 1v9c0 .552.448 1 1 1s1-.448 1-1v-9zm-2-7h-4v1h4v-1z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="recent-downloads">
+            <div class="no-downloads">Gathering data...</div>
+        </div>
+        <div class="section-title">
+          <span>Previous sessions</span>
+          <button  id="previous-downloads-delete">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M19 24h-14c-1.104 0-2-.896-2-2v-17h-1v-2h6v-1.5c0-.827.673-1.5 1.5-1.5h5c.825 0 1.5.671 1.5 1.5v1.5h6v2h-1v17c0 1.104-.896 2-2 2zm0-19h-14v16.5c0 .276.224.5.5.5h13c.276 0 .5-.224.5-.5v-16.5zm-9 4c0-.552-.448-1-1-1s-1 .448-1 1v9c0 .552.448 1 1 1s1-.448 1-1v-9zm6 0c0-.552-.448-1-1-1s-1 .448-1 1v9c0 .552.448 1 1 1s1-.448 1-1v-9zm-2-7h-4v1h4v-1z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="previous-downloads">
+            <div class="no-downloads">Download history is empty</div>
+        </div>
+    </div>
 
-  <script>
-    const { app, remote } = require('electron')
-    const settings = require('electron-settings')
-    const currentWebContents = remote.getCurrentWebContents()
-    const ul = document.querySelector('ul')
-
-    let downloadItems = settings.getSync('downloads')
-    downloadItems.forEach((item) => {
-
-      console.log(item)
-
-      let li = document.createElement('li')
-      let span = document.createElement('span')
-      let title = document.createElement('span')
-      let br = document.createElement('br')
-      let subtitle = document.createElement('span')
-      let separator = document.createElement('span')
-      let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-
-      span.className = 'item'
-      title.className = 'item-title'
-      subtitle.className = 'item-subtitle'
-      separator.className = 'separator'
-
-      title.textContent = item.fileName
-      subtitle.textContent = item.savePath
-
-      // svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-      svg.setAttribute('width', 16)
-      svg.setAttribute('height', 16)
-      svg.setAttribute('viewBox', '0 0 24 24')
-      svg.innerHTML = `<path d="M23 20.168l-8.185-8.187 8.185-8.174-2.832-2.807-8.182 8.179-8.176-8.179-2.81 2.81 8.186 8.196-8.186 8.184 2.81 2.81 8.203-8.192 8.18 8.192z"/>`
-
-      span.appendChild(title)
-      span.appendChild(br)
-      span.appendChild(subtitle)
-      li.appendChild(span)
-      li.appendChild(separator)
-      li.appendChild(svg)
-      ul.appendChild(li)
-
-      /*
-      item.on('updated', (event, state) => {
-        if (state === 'interrupted') {
-          console.log('Download is interrupted but can be resumed')
-        } else if (state === 'progressing') {
-          if (item.isPaused()) {
-            console.log('Download is paused')
-          } else {
-            console.log(`Received bytes: ${item.getReceivedBytes()}`)
-          }
+    <script>
+        const playSVG = '<path d="M23 12l-22 12v-24l22 12zm-21 10.315l18.912-10.315-18.912-10.315v20.63z"/>'
+        const pauseSVG = '<path d="M10 24h-6v-24h6v24zm10 0h-6v-24h6v24zm-11-23h-4v22h4v-22zm10 0h-4v22h4v-22z"/>'
+        const deleteSVG = '<path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z"/>'
+        const closeSVG = '<path d="M12 11.293l10.293-10.293.707.707-10.293 10.293 10.293 10.293-.707.707-10.293-10.293-10.293 10.293-.707-.707 10.293-10.293-10.293-10.293.707-.707 10.293 10.293z"/>'
+        const openSVG = '<path d="M14 4h-13v18h20v-11h1v12h-22v-20h14v1zm10 5h-1v-6.293l-11.646 11.647-.708-.708 11.647-11.646h-6.293v-1h8v8z"/>'
+        const reloadSVG = '<path d="M7 9h-7v-7h1v5.2c1.853-4.237 6.083-7.2 11-7.2 6.623 0 12 5.377 12 12s-5.377 12-12 12c-6.286 0-11.45-4.844-11.959-11h1.004c.506 5.603 5.221 10 10.955 10 6.071 0 11-4.929 11-11s-4.929-11-11-11c-4.66 0-8.647 2.904-10.249 7h5.249v1z"/>'
+        const showInFilesText = 'Show in ' + (platform === 'darwin' ? 'Finder' : platform === 'win32' ? 'File Explorer' : 'Files')
+        const deleteText = 'Delete'
+        const deleteAllText = 'Delete all'
+        const deleteAndCancelAllText = 'Cancel and delete all ongoing downloads'
+        const pauseText = 'Pause download'
+        const resumeText = 'Resume download'
+        
+        const body = document.body
+        const titleBarSettings = settings.getSync('title-bar') || '0'
+        const recentDownloadsDiv = document.querySelector('#recent-downloads')
+        const previousDownloadsDiv = document.querySelector('#previous-downloads')
+        const recentDownloadsTitle = document.querySelector('.section-title span')
+        const recentDownloadsButton = document.querySelector('.section-title button')
+        
+        if (platform === 'win32') {
+            document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
+            let windowButtons = document.querySelectorAll('.window-button')
+            windowButtons.forEach((button, index) => {
+                button.onmouseenter = (e) => {
+                    button.classList.add('hover')
+                    button.parentElement.classList.add('hover')
+                }
+                button.onmouseleave = (e) => {
+                    button.classList.remove('hover')
+                    button.parentElement.classList.remove('hover')
+                }
+                button.onclick = (e) => {
+                    if (index === 0) currentWindow.minimize()
+                    else currentWindow.close()
+                }
+            })
+            currentWindow.on('minimize', (e) => windowButtons.forEach((button) => button.classList.remove('hover')))
         }
-      })
-      item.once('done', (event, state) => {
-        if (state === 'completed') {
-          console.log('Download successfully')
-        } else {
-          console.log(`Download failed: ${state}`)
+
+        document.querySelector('h3').textContent = 'Downloads'
+        setInterval(() => {
+            let recentDownloads = remote.getGlobal('recentDownloads')
+            if (recentDownloads.length === 0) {
+                document.querySelector('#recent-downloads .no-downloads').classList.remove('hidden')
+                document.querySelector('#recent-downloads .no-downloads').textContent = 'There are no ongoing downloads'
+            } else {
+                document.querySelector('#recent-downloads .no-downloads').textContent = '\xa0'
+                document.querySelector('#recent-downloads .no-downloads').classList.add('hidden')
+                recentDownloads.forEach((item) => {
+                    let id = item.getStartTime().toString().replace('.','_')
+                    let state = item.getState()
+                    let fn = item.savePath.slice(item.savePath.lastIndexOf(separator) + 1) 
+                    if (document.querySelector('#item_' + id)) {
+                        let spans = document.querySelectorAll('#item_' + id + ' span')
+                        spans[0].innerHTML = fn && fn.length > 0 ? fn : '[Pending...]'
+                        let svgs = document.querySelectorAll('#item_' + id + ' svg')
+                        let svg = svgs[0]
+                        let exists = fs.existsSync(item.savePath)
+                        if (state === 'completed') {
+                            spans[1].innerHTML = ''
+                            svg.innerHTML = exists ? openSVG : reloadSVG
+                            svg.parentElement.title = showInFilesText
+                            svg.parentElement.onclick = (e) => {
+                                if (exists) {
+                                    ipcRenderer.send('show-download-item-in-files', item.savePath)
+                                } else {
+                                    ipcRenderer.send('re-download-file', item.id, item.url)
+                                    recentDownloadsDiv.removeChild(svg.parentElement.parentElement)
+                                }
+                            }
+                            if (exists) {
+                                spans[0].classList.remove('deleted')
+                            } else {
+                                spans[0].classList.add('deleted')
+                            }
+                        } else if (state === 'cancelled') {
+                            recentDownloadsDiv.removeChild(svg.parentElement.parentElement)
+                        } else if (item.canResume()) {
+                            svg.innerHTML = state === 'progressing' ? pauseSVG : state === 'interrupted' ? playSVG : ''
+                            svg.title = state === 'progressing' ? pauseText : state === 'interrupted' ? resumeText : ''
+                        }
+                    } else if (state === 'cancelled') {
+                        ipcRenderer.send('cancel-download-item', item.id, item.getState())
+                    } else {
+                        let div = document.createElement('div')
+                        div.classList.add('download-item')
+                        div.id = 'item_' + id
+                        let fileName = document.createElement('span')
+                        fileName.className = 'file-name'
+                        fileName.innerHTML = fn && fn.length > 0 ? fn : '[Pending...]'
+                        let progress = document.createElement('span')
+                        progress.className = 'progress'
+                        progress.innerHTML = item.getState() === 'completed' ? '' : Math.round(100 * item.getReceivedBytes() / item.getTotalBytes()) + '%'
+                        let playPauseButton = document.createElement('button')
+                        let playPauseButtonSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+                        playPauseButtonSVG.setAttribute('viewBox', '0 0 24 24')
+                        playPauseButtonSVG.innerHTML = item.getState() === 'completed' ? openSVG : pauseSVG
+                        playPauseButton.appendChild(playPauseButtonSVG)
+                        let deleteButton = document.createElement('button')
+                        let deleteButtonSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+                        deleteButtonSVG.setAttribute('viewBox', '0 0 24 24')
+                        deleteButtonSVG.innerHTML = closeSVG
+                        deleteButton.title = deleteText
+                        deleteButton.appendChild(deleteButtonSVG)
+                        div.appendChild(fileName)
+                        div.appendChild(progress)
+                        div.appendChild(playPauseButton)
+                        div.appendChild(deleteButton)
+                        recentDownloadsDiv.appendChild(div)
+                        playPauseButton.onclick = (e) => {
+                            if (!item.canResume()) return
+                            let itemState = item.getState()
+                            if (itemState === 'progressing') {
+                                item.pause()
+                            } else if (itemState === 'interrupted') {
+                                item.resume()
+                            }
+                        }
+                        deleteButton.onclick = (e) => {
+                            ipcRenderer.send('cancel-download-item', item.id, item.getState())
+                            recentDownloadsDiv.removeChild(div)
+                            if (item.getState() !== 'completed') item.cancel()
+                        }
+                    }
+                })
+            }
+
+            let previousDownloads = remote.getGlobal('previousDownloads')
+            if (previousDownloads.length === 0) {
+                document.querySelector('#previous-downloads .no-downloads').classList.remove('hidden')
+            } else {
+                document.querySelector('#previous-downloads .no-downloads').classList.add('hidden')
+                previousDownloads.forEach((item) => {
+                    let exists = fs.existsSync(item.savePath)
+                    let id = item.startTime.toString().replace('.','_')
+                    if (document.querySelector('#item_' + id)) return
+                    let div = document.createElement('div')
+                    div.classList.add('download-item')
+                    div.id = 'item_' + id
+                    let fileName = document.createElement('span')
+                    fileName.className = 'file-name'
+                    fileName.innerHTML = item.savePath.slice(item.savePath.lastIndexOf(separator) + 1)
+                    if (exists) {
+                        fileName.classList.remove('deleted')
+                    } else {
+                        fileName.classList.add('deleted')
+                    }
+                    let playPauseButton = document.createElement('button')
+                    let playPauseButtonSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+                    playPauseButtonSVG.setAttribute('viewBox', '0 0 24 24')
+                    playPauseButtonSVG.innerHTML = exists ? openSVG : reloadSVG
+                    playPauseButton.title = exists ? showInFilesText : 'Copy download link'
+                    playPauseButton.appendChild(playPauseButtonSVG)
+                    let deleteButton = document.createElement('button')
+                    let deleteButtonSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+                    deleteButtonSVG.setAttribute('viewBox', '0 0 24 24')
+                    deleteButtonSVG.innerHTML = closeSVG
+                    deleteButton.title = deleteText
+                    deleteButton.appendChild(deleteButtonSVG)
+                    div.appendChild(fileName)
+                    div.appendChild(playPauseButton)
+                    div.appendChild(deleteButton)
+                    playPauseButton.onclick = (e) => {
+                        if (exists) {
+                            ipcRenderer.send('show-download-item-in-files', item.savePath)
+                        } else {
+                            ipcRenderer.send('re-download-file', item.id, item.url)
+                            previousDownloadsDiv.removeChild(div)
+                        }
+                    }
+                    deleteButton.onclick = (e) => {
+                        previousDownloadsDiv.removeChild(div)
+                        ipcRenderer.send('delete-download-item', item.id)
+                    }
+                    previousDownloadsDiv.appendChild(div)
+                })
+            }
+        }, 1000)
+
+        document.querySelector('#recent-downloads-delete').onclick = (e) => {
+            ipcRenderer.send('delete-all-recent-downloads')
+            recentDownloadsDiv.innerHTML = ''
         }
-      })
-      */
+        document.querySelector('#previous-downloads-delete').onclick = (e) => {
+            ipcRenderer.send('delete-all-previous-downloads')
+            previousDownloadsDiv.innerHTML = ''
+        }
 
-
-
-    })
-  </script>
+        ipcRenderer.on('dark', (e, dark, version) => {
+            if (dark) {
+                document.body.classList.add('dark')
+            } else {
+                document.body.classList.remove('dark')
+            }
+            document.body.classList.remove('transparent')
+        })
+    </script>
 </body>
+
 </html>

@@ -357,17 +357,16 @@
             windowButtons.forEach((button, index) => {
                 button.onmouseenter = (e) => {
                     button.classList.add('hover')
-                    button.parentElement.classList.add('hover')
                 }
                 button.onmouseleave = (e) => {
                     button.classList.remove('hover')
-                    button.parentElement.classList.remove('hover')
                 }
                 button.onclick = (e) => {
                     if (index === 0) currentWindow.minimize()
                     else currentWindow.close()
                 }
             })
+            currentWindow.on('minimize', (e) => windowButtons.forEach((button) => button.classList.remove('hover')))
         }
 
         document.querySelector('h3').textContent = platform === 'darwin' ? 'Preferences' : 'Settings'
