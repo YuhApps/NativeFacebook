@@ -214,8 +214,9 @@
         }
     </style>
     <script>
-        const { remote, ipcRenderer } = require('electron')
-        const settings = require('electron-settings')
+        const { ipcRenderer } = require('electron')
+        const remote = require('@electron/remote')
+        const settings = require('./settings')
         const currentWindow = remote.getCurrentWindow()
         const currentWebContents = remote.getCurrentWebContents()
         const platform = remote.process.platform
@@ -281,7 +282,7 @@
         const resumeText = 'Resume download'
         
         const body = document.body
-        const titleBarSettings = settings.getSync('title-bar') || '0'
+        const titleBarSettings = settings.get('title-bar') || '0'
         const recentDownloadsDiv = document.querySelector('#recent-downloads')
         const previousDownloadsDiv = document.querySelector('#previous-downloads')
         const recentDownloadsTitle = document.querySelector('.section-title span')

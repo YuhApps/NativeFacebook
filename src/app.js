@@ -1,13 +1,14 @@
 const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar, webContents } = require('electron')
+const electronRemote = require('@electron/remote/main')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
-const settings = require('electron-settings')
 const { platform } = require('os')
 const path = require('path')
-const { version } = require('typescript')
 const validUrlUtf8 = require('valid-url-utf8')
 const fs = require('fs')
 
-const BUILD_DATE = '2021.12.31'
+const settings = require('./settings')
+
+const BUILD_DATE = '2022.02.14'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -44,12 +45,15 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
+let tempUrl
 
 /** Basic Electron app events: */
 
+electronRemote.initialize()
+
 app.whenReady().then(() => {
-    titleBarAppearance = settings.getSync('title-bar') || '0'
-    forceDarkScrollbar = settings.getSync('scrollbar') || '0'
+    titleBarAppearance = settings.get('title-bar') || '0'
+    forceDarkScrollbar = settings.get('scrollbar') || '0'
     global.recentDownloads = [] 
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
@@ -62,6 +66,10 @@ app.whenReady().then(() => {
         }
     } else {
         Menu.setApplicationMenu(null)
+    }
+    if (tempUrl) {
+        createBrowserWindow(tempUrl)
+        tempUrl = undefined
     }
 })
 
@@ -77,7 +85,13 @@ app.on('activate', (event, hasVisibleWindows) => {
 })
 
 app.on('open-url', (event, url) => {
-    createBrowserWindow(url, DEFAULT_WINDOW_BOUNDS)
+    if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
+    if (app.isReady()) {
+        createBrowserWindow(url)
+    } else {
+        tempUrl = url
+    }
+    
 })
 
 app.on('new-window-for-tab', (event) => {
@@ -99,13 +113,11 @@ app.setAboutPanelOptions({
 app.on('before-quit', (event) => {
     let downloads = [...global.recentDownloads.filter((item) => item.getState() === 'completed'), ...global.previousDownloads]
     fs.writeFileSync(DOWNLOADS_JSON_PATH, JSON.stringify(downloads))
-    askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient())
-    app.exit(0)
+    askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient()).then(() => app.exit(0))
 })
 
 app.on('window-all-closed', () => {
-    askRevertToTheDefaultBrowser(isDefaultHttpProtocolClient())
-    let acb = settings.getSync('acb') || '0'
+    let acb = settings.get('acb') || '0'
     if (process.platform !== 'darwin' || acb === '3') {
         app.quit()
     } else {
@@ -123,7 +135,7 @@ app.on('window-all-closed', () => {
 
 powerMonitor.on('on-battery', () => {
     if (process.platform !== 'darwin') return
-    let acb = settings.getSync('acb') || '0'
+    let acb = settings.get('acb') || '0'
     if (acb === '1' && !mainWindow.isVisible()) {
         mainWindow.close()
     }
@@ -131,7 +143,7 @@ powerMonitor.on('on-battery', () => {
 
 powerMonitor.on('on-ac', () => {
     if (process.platform !== 'darwin') return
-    let acb = settings.getSync('acb') || '0'
+    let acb = settings.get('acb') || '0'
     if ((acb === '0' || acb === '1') && (mainWindow.isDestroyed())) {
         createMainWindow(FACEBOOK_URL, false).hide()
         app.hide()
@@ -154,10 +166,14 @@ ipcMain.on('app-context-menu', () => {
         label: 'Settings',
         click: createPrefsWindow,
     }))
+    menu.append(new MenuItem({
+        label: 'Downloads',
+        click: createDownloadsWindow,
+    }))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
         label: 'About Facebook',
-        click: () => createAboutWindow()
+        click: createAboutWindow
     }))
     menu.popup({
         window: BrowserWindow.getFocusedWindow(),
@@ -213,7 +229,7 @@ ipcMain.on('open-about', () => createAboutWindow())
 /**************************************/
 
 function requestCameraAndMicrophonePermissions() {
-    let cam_mic = settings.getSync('cam_mic') || '0'
+    let cam_mic = settings.get('cam_mic') || '0'
     if (cam_mic === '0') return
     Promise.all([systemPreferences.getMediaAccessStatus('camera'), systemPreferences.getMediaAccessStatus('microphone')])
         .then(async([cam, mic]) => {
@@ -256,48 +272,47 @@ function requestToBeTheDefaultBrowser() {
     })
 }
 
-function askRevertToTheDefaultBrowser(show) {
+async function askRevertToTheDefaultBrowser(show) {
     if (show) {
         if (platform === 'darwin') {
-            dialog.showMessageBox({
+            const { response_0 } = await dialog.showMessageBox({
                 id: 0,
                 message: 'Facebook is still your default browser',
                 detail: 'Open System Preferences, click General and set your favourite browser as the default one. Facebook should not remain as the default browser.',
                 buttons: ['Open System Preferences', 'Use Safari', 'Cancel']
-            }).then(({ response }) => {
-                if (response === 0) {
-                    let url = 'x-apple.systempreferences:com.apple.preference.general'
-                    shell.openExternal(url)
-                } else if (response == 1) {
-                    app.removeAsDefaultProtocolClient('http')
-                    app.removeAsDefaultProtocolClient('https')
-                }
             })
+            if (response_0 === 0) {
+                let url = 'x-apple.systempreferences:com.apple.preference.general'
+                shell.openExternal(url)
+            } else if (response_0 == 1) {
+                app.removeAsDefaultProtocolClient('http')
+                app.removeAsDefaultProtocolClient('https')
+            }
         } else if (platform === 'win32') {
-            dialog.showMessageBox({
+            const { response: response_1 } = await dialog.showMessageBox({
                 id: 0,
                 message: 'Facebook is still your default browser',
                 detail: 'Open Settings, and select System/Apps, then Default Apps, and select your favourite browser under Web browser section. Facebook should not remain as the default browser.',
                 buttons: ['Open Settings', 'Cancel']
-            }).then(({ response }) => {
-                if (response === 0) {
-                    let url = 'ms-settings:defaultapps'
-                    shell.openExternal(url)
-                }
             })
+            if (response_1 === 0) {
+                let url_2 = 'ms-settings:defaultapps'
+                shell.openExternal(url_2)
+            }
         } else { // linux
-            dialog.showMessageBox({
+            const { response: response_2 } = await dialog.showMessageBox({
                 id: 0,
                 message: 'Facebook is still your default browser',
                 detail: 'Open System Settings, and search for Default apps, then set your favourite browser as the default one. Facebook should not remain as the default browser.',
                 buttons: ['OK', 'Cancel']
-            }).then(({ response }) => {
-                if (response === 0) {
-                    app.removeAsDefaultProtocolClient('http')
-                    app.removeAsDefaultProtocolClient('https')
-                }
             })
+            if (response_2 === 0) {
+                app.removeAsDefaultProtocolClient('http')
+                app.removeAsDefaultProtocolClient('https')
+            }
         }
+    } else {
+        return Promise.resolve()
     }
 }
 
@@ -315,8 +330,8 @@ function createBrowserWindow(url, bounds, blank) {
 }
 
 function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
-    let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
-    let max = settings.getSync('max') || '0' // Windows and Linux only
+    let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
+    let max = settings.get('max') || '0' // Windows and Linux only
     let window = new BrowserWindow({
         x: x,
         y: y,
@@ -329,7 +344,7 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
         webviewTag: true,
         webPreferences: {
             webSecurity: true,
-            spellcheck: settings.getSync('spell') === '1' || false,
+            spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
             plugins: true
         },
@@ -366,6 +381,7 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
     window.webContents.on('new-window', (event, url) => {
         event.preventDefault()
+        if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
         if (process.platform === 'darwin') {
             window.addTabbedWindow(createBrowserWindow(url))
         } else {
@@ -410,8 +426,8 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
 }
 
 function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
-    let { x, y, width, height } = bounds || settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
-    let max = settings.getSync('max') || '0' // Windows and Linux only
+    let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
+    let max = settings.get('max') || '0' // Windows and Linux only
     let titleBarHeight = process.platform === 'win32' ? 32 : 28
     if (titleBarAppearance === 0) {
         nativeTheme.themeSource = process.platform === 'win32' ? 'light' : 'system'
@@ -432,7 +448,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         titleBarStyle: titleBarAppearance !== '0' ? 'hidden' : undefined,
         webPreferences: {
             webSecurity: true,
-            spellcheck: settings.getSync('spell') === '1' || false,
+            spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
             plugins: true
         },
@@ -456,7 +472,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     let mainView = new BrowserView({
         scrollBounce: true, 
         webPreferences: {
-            spellcheck: settings.getSync('spell') === '1' || false,
+            spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
             contextIsolation: true,
             preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
@@ -467,6 +483,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     window.addBrowserView(mainView)
     mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     // Load URL or File
+    electronRemote.enable(titleView.webContents)
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
         mainView.webContents.loadFile(url).then(() => {
@@ -508,6 +525,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     }))
     mainView.webContents.on('new-window', (event, url) => {
         event.preventDefault()
+        if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
         createBrowserWindow(url)
     })
     mainView.webContents.on('enter-html-full-screen', () => {
@@ -538,7 +556,7 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
         }
     })
     window.on('close', (event) => {
-        let acb = settings.getSync('acb') || '0'
+        let acb = settings.get('acb') || '0'
         if (window !== mainWindow || process.platform !== 'darwin') {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
@@ -583,7 +601,7 @@ function createMainWindow(url) {
         settings.set('mainWindow', mainWindow.getBounds())
     })
     mainWindow.on('close', (event) => {
-        let acb = settings.getSync('acb') || '0'
+        let acb = settings.get('acb') || '0'
         if (process.platform !== 'darwin') {
             return
         } else if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
@@ -642,6 +660,7 @@ function createAboutWindow() {
                 devTools: true
             }
         })
+        electronRemote.enable(aboutWindow.webContents)
         aboutWindow.loadFile('src/about.html')
         aboutWindow.setTitle('About Facebook (Unofficial)')
         aboutWindow.on('close', () => aboutWindow = null)
@@ -656,15 +675,15 @@ function createAboutWindow() {
                         settings.setSync('prefs-dark', res)
                     })
                     .catch((e) => {
-                        let dark = settings.getSync('prefs-dark') || false
+                        let dark = settings.get('prefs-dark') || false
                         aboutWindow.webContents.send('dark', dark, version)
                     })
                 } else {
-                    let dark = settings.getSync('prefs-dark') || false
+                    let dark = settings.get('prefs-dark') || false
                     aboutWindow.webContents.send('dark', dark, version)
                 }
             } else {
-                let dark = settings.getSync('prefs-dark') || false
+                let dark = settings.get('prefs-dark') || false
                 aboutWindow.webContents.send('dark', dark, version)
             }
         })
@@ -704,11 +723,12 @@ function createPrefsWindow() {
                 contextIsolation: false
             },
         })
+        electronRemote.enable(prefsWindow.webContents)
         prefsWindow.loadFile('src/prefs.html')
         prefsWindow.setTitle(process.platform === 'darwin' ? 'Preferences' : 'Settings')
         prefsWindow.on('close', () => {
-            let dev = settings.getSync('dev') || '0'
-            let pip = settings.getSync('pip') || '0'
+            let dev = settings.get('dev') || '0'
+            let pip = settings.get('pip') || '0'
             let menu = Menu.getApplicationMenu()
             if (menu !== null) {
                 menu.getMenuItemById('pip').visible = pip === '1'
@@ -719,8 +739,10 @@ function createPrefsWindow() {
         })
         prefsWindow.on('closed', () => {
             prefsWindow = null
-            let t = settings.getSync('title-bar') || '0'
-            if (t !== titleBarAppearance) {
+            settings.refresh()
+            let t = settings.get('title-bar') || '0'
+            let s = settings.get('scrollbar') || '0'
+            if (t !== titleBarAppearance || s !== forceDarkScrollbar) {
                 app.relaunch()
                 setTimeout(app.quit, 500)
             }
@@ -736,15 +758,15 @@ function createPrefsWindow() {
                         settings.setSync('prefs-dark', res)
                     })
                     .catch((e) => {
-                        let dark = settings.getSync('prefs-dark') || false
+                        let dark = settings.get('prefs-dark') || false
                         prefsWindow.webContents.send('dark', dark, version)
                     })
                 } else {
-                    let dark = settings.getSync('prefs-dark') || false
+                    let dark = settings.get('prefs-dark') || false
                     prefsWindow.webContents.send('dark', dark, version)
                 }
             } else {
-                let dark = settings.getSync('prefs-dark') || false
+                let dark = settings.get('prefs-dark') || false
                 prefsWindow.webContents.send('dark', dark, version)
             }
         })
@@ -780,6 +802,7 @@ function createDownloadsWindow() {
                 contextIsolation: false
             },
         })
+        electronRemote.enable(downloadsWindow.webContents)
         downloadsWindow.loadFile('src/downloads.html')
         downloadsWindow.setTitle('Downloads')
         downloadsWindow.on('closed', () => {
@@ -796,15 +819,15 @@ function createDownloadsWindow() {
                         settings.setSync('prefs-dark', res)
                     })
                     .catch((e) => {
-                        let dark = settings.getSync('prefs-dark') || false
+                        let dark = settings.get('prefs-dark') || false
                         downloadsWindow.webContents.send('dark', dark, version)
                     })
                 } else {
-                    let dark = settings.getSync('prefs-dark') || false
+                    let dark = settings.get('prefs-dark') || false
                     downloadsWindow.webContents.send('dark', dark, version)
                 }
             } else {
-                let dark = settings.getSync('prefs-dark') || false
+                let dark = settings.get('prefs-dark') || false
                 downloadsWindow.webContents.send('dark', dark, version)
             }
         })
@@ -829,8 +852,8 @@ function isLink(text) {
  * @see app.whenReady
  */
 function createAppMenu() {
-    let dev = settings.getSync('dev') || '0'
-    let pip = settings.getSync('pip') || '0'
+    let dev = settings.get('dev') || '0'
+    let pip = settings.get('pip') || '0'
     let appMenu = new MenuItem({
         label: 'Facebook',
         submenu: [
@@ -1012,7 +1035,7 @@ function createAppMenu() {
                     } else if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
                     } else {
-                        let bounds = settings.getSync('mainWindow') || DEFAULT_WINDOW_BOUNDS
+                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
                         mainWindow = createBrowserWindow(MESSENGER_URL, bounds)
                     }
                 },
@@ -1140,8 +1163,8 @@ function createAppMenu() {
  */
 function createContextMenuForWindow(webContents, { editFlags, isEditable, linkURL, linkText, mediaType, mute, selectionText, srcURL, x, y }) {
     let menu = new Menu()
-    let dev = settings.getSync('dev') || '0'
-    let pip = settings.getSync('pip') || '0'
+    let dev = settings.get('dev') || '0'
+    let pip = settings.get('pip') || '0'
     if (linkURL) {
         menu.append(new MenuItem({
             label: 'Open Link in New Background Tab',
@@ -1402,6 +1425,13 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         visible: webContents,
         click: (menuItem, browserWindow, event) => {
             webContents.setAudioMuted(!webContents.isAudioMuted())
+        }
+    }))
+    menu.append(new MenuItem({
+        label: 'Request Facebook Desktop site',
+        visible: webContents && webContents.getURL().startsWith('https://m.facebook.com'),
+        click: (menuItem, browserWindow, event) => {
+            if (webContents) webContents.loadURL(webContents.getURL().replace('https://m.facebook.com', 'https://www.facebook.com'))
         }
     }))
     if (process.platform !== 'darwin') {

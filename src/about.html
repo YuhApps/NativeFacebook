@@ -115,7 +115,8 @@
         </button>
     </div>
     <script>
-        const { remote, ipcRenderer } = require('electron')
+        const { ipcRenderer } = require('electron')
+        const remote = require('@electron/remote')
         const currentWindow = remote.getCurrentWindow()
         const isWindows = remote.process.platform === 'win32'
         const button = document.querySelector('.window-button.close')

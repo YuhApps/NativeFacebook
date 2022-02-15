@@ -217,8 +217,9 @@
         }
     </style>
     <script>
-        const { remote, ipcRenderer } = require('electron')
-        const settings = require('electron-settings')
+        const { ipcRenderer } = require('electron')
+        const remote = require('@electron/remote')
+        const settings = require('./settings') // require('electron-settings')
         const currentWindow = remote.getCurrentWindow()
         const currentWebContents = remote.getCurrentWebContents()
         const platform = remote.process.platform
@@ -347,7 +348,7 @@
         const body = document.body
         const prefButtons = document.querySelectorAll('.pref-button')
         const appVersion = document.querySelector('#app-version')
-        const titleBarSettings = settings.getSync('title-bar') || '0'
+        const titleBarSettings = settings.get('title-bar') || '0'
 
         appVersion.textContent = remote.app.getVersion()
         
@@ -380,7 +381,7 @@
             }
         })
         document.querySelectorAll('input[type="radio"]').forEach((radio) => {
-            radio.checked = (settings.getSync(radio.name) || '0') === radio.value
+            radio.checked = (settings.get(radio.name) || '0') === radio.value
             radio.addEventListener('change', () => {
                 settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
             })
@@ -388,7 +389,7 @@
         body.onclick = (e) => {
             if (e.target.tagName !== 'button') {
                 body.classList.remove('transparent')
-                if ((settings.getSync('prefs-dark') || false) === true) {
+                if ((settings.get('prefs-dark') || false) === true) {
                     body.classList.add('dark')   
                 }
             }

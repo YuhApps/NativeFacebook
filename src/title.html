@@ -136,13 +136,14 @@
     </div>
     <div id="resize"></div>
     <script>
-        let { ipcMain, ipcRenderer, remote } = require('electron')
+        let { ipcMain, ipcRenderer } = require('electron')
+        let remote = require('@electron/remote')
         let platform = remote.process.platform
-        let settings = require('electron-settings')
+        let settings = require('./settings')
         let titleView = document.querySelector('div#main')
         let titleText = document.querySelector('div span')
-        let max = settings.getSync('max') || '0'
-        let titleBarSettings = settings.getSync('title-bar') || '0'
+        let max = settings.get('max') || '0'
+        let titleBarSettings = settings.get('title-bar') || '0'
         let windowButtons = document.querySelectorAll('.window-button')
         let newTabButton = windowButtons[0]
         let minButton = windowButtons[1]
