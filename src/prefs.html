@@ -11,6 +11,7 @@
             --web-wash: rgb(240, 242, 245);
             --web-wash-dark: #18191a;
             --fb-nav-dark: #242526;
+            --fb-color-dark: #d2e3fc;
         }
         body {
             background: white;
@@ -120,8 +121,8 @@
             font-weight: bold;
         }
         .dark .pref-title {
-            border-bottom: 1px solid lightgrey;
-            color: lightgrey;
+            border-bottom: 1px solid var(--fb-color-dark);
+            color: var(--fb-color-dark);
         }
         .pref-subtitle {
             color: grey;
@@ -166,7 +167,7 @@
             color: white;
         }
         .dark .pref-button {
-            background: lightgray;
+            background: var(--fb-color-dark);
             color: var(--web-wash-dark);
         }
         .pref-button.warning {
@@ -383,7 +384,7 @@
         document.querySelectorAll('input[type="radio"]').forEach((radio) => {
             radio.checked = (settings.get(radio.name) || '0') === radio.value
             radio.addEventListener('change', () => {
-                settings.set(radio.name, radio.value).then((res) => console.log(res)).catch((error) => console.error(error))
+                settings.set(radio.name, radio.value)
             })
         })
         body.onclick = (e) => {
@@ -412,7 +413,6 @@
             appVersion.textContent = ' ' + version
             appVersion.onclick = (e) => ipcRenderer.send('open-about')
         })
-        // currentWebContents.openDevTools()
     </script>
 </body>
 

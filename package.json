@@ -1,6 +1,6 @@
 {
     "name": "Facebook",
-    "version": "1.0.35",
+    "version": "1.0.40",
     "description": "A Facebook client for macOS, Windows and Linux",
     "main": "src/app.js",
     "scripts": {
@@ -9,9 +9,9 @@
         "dist-linux": "npx electron-builder -l AppImage",
         "dist-tux": "npx electron-builder -l AppImage",
         "dist-win": "npx electron-builder -w msi",
-        "pack-mac": "electron-builder -m dir",
-        "pack-tux": "electron-builder -l AppImage",
-        "pack-win": "electron-builder -w msi"
+        "pack-mac": "electron-builder -m dir && open dist/mac",
+        "pack-tux": "electron-builder -l AppImage && open dist/",
+        "pack-win": "electron-builder -w msi && start dist/"
     },
     "build": {
         "appId": "dev.yuhapps.facebook.katana",
@@ -60,7 +60,7 @@
     },
     "devDependencies": {
         "bufferutil": "4",
-        "electron": "^16.0.9",
+        "electron": "^13.6.9",
         "electron-builder": "^22.14.13",
         "utf-8-validate": "5"
     },

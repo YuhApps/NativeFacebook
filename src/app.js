@@ -8,7 +8,7 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const BUILD_DATE = '2022.02.14'
+const BUILD_DATE = '2022.03.05'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -45,7 +45,7 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
-let tempUrl
+let tempUrl, forceCloseMainWindow = false
 
 /** Basic Electron app events: */
 
@@ -136,27 +136,25 @@ app.on('window-all-closed', () => {
 powerMonitor.on('on-battery', () => {
     if (process.platform !== 'darwin') return
     let acb = settings.get('acb') || '0'
-    if (acb === '1' && !mainWindow.isVisible()) {
+    if (acb === '1' && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
         mainWindow.close()
     }
 })
 
 powerMonitor.on('on-ac', () => {
+    // Should do nothing
+})
+
+powerMonitor.on('suspend', () => {
     if (process.platform !== 'darwin') return
-    let acb = settings.get('acb') || '0'
-    if ((acb === '0' || acb === '1') && (mainWindow.isDestroyed())) {
-        createMainWindow(FACEBOOK_URL, false).hide()
-        app.hide()
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+        forceCloseMainWindow = true
+        mainWindow.close()
     }
 })
 
 powerMonitor.on('resume', (event) => {
-    if (process.platform !== 'darwin') return
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
-        webContents.reload()
-        app.hide()
-    }
+    // Do nothing
 })
 
 // Handle app context menu invoke on Windows
@@ -237,13 +235,13 @@ function requestCameraAndMicrophonePermissions() {
                 const { response } = await dialog.showMessageBox({
                     defaultId: 1,
                     message: 'Camera and Microphone permissions',
-                    detail: 'In order to allow livestreaming, Native Facebook requires access to Camera and Microphone. Please open System Preferences, ' +
-                        'click on Security & Privacy, select the Privacy tab, and give Native Facebook access to Camera and Microphone. If you do not ' +
+                    detail: 'In order to allow livestreaming, Facebook (Unofficial) requires access to Camera and Microphone. Please open System Preferences, ' +
+                        'click on Security & Privacy, select the Privacy tab, and give Facebook (Unofficial) access to Camera and Microphone. If you do not ' +
                         'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
                     buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
                 })
                 if (response === 2) {
-                    settings.setSync('cam_mic', 0)
+                    settings.set('cam_mic', '0')
                 } else if (response === 1) {
                     shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?privacy`)
                 }
@@ -378,15 +376,14 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     })
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
-    // Unused params in the callback in order: frameName, disposition, options, additionalFeatures, referrer, postBody
-    window.webContents.on('new-window', (event, url) => {
-        event.preventDefault()
+    window.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
         if (process.platform === 'darwin') {
             window.addTabbedWindow(createBrowserWindow(url))
         } else {
             createBrowserWindow(url)
         }
+        return { action: 'deny' }
     })
     // Create context menu for each window
     window.webContents.on('context-menu', (event, params) => {
@@ -523,10 +520,10 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
             menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
         }
     }))
-    mainView.webContents.on('new-window', (event, url) => {
-        event.preventDefault()
+    mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
         createBrowserWindow(url)
+        return { action: 'deny' }
     })
     mainView.webContents.on('enter-html-full-screen', () => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
@@ -602,7 +599,8 @@ function createMainWindow(url) {
     })
     mainWindow.on('close', (event) => {
         let acb = settings.get('acb') || '0'
-        if (process.platform !== 'darwin') {
+        if (process.platform !== 'darwin' || forceCloseMainWindow) {
+            forceCloseMainWindow = false
             return
         } else if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
             event.preventDefault()
@@ -672,7 +670,7 @@ function createAboutWindow() {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
                         aboutWindow.webContents.send('dark', res, version)
-                        settings.setSync('prefs-dark', res)
+                        settings.set('prefs-dark', res)
                     })
                     .catch((e) => {
                         let dark = settings.get('prefs-dark') || false
@@ -755,7 +753,7 @@ function createPrefsWindow() {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
                         prefsWindow.webContents.send('dark', res, version)
-                        settings.setSync('prefs-dark', res)
+                        settings.set('prefs-dark', res)
                     })
                     .catch((e) => {
                         let dark = settings.get('prefs-dark') || false
@@ -816,7 +814,7 @@ function createDownloadsWindow() {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
                         downloadsWindow.webContents.send('dark', res, version)
-                        settings.setSync('prefs-dark', res)
+                        settings.set('prefs-dark', res)
                     })
                     .catch((e) => {
                         let dark = settings.get('prefs-dark') || false
@@ -863,7 +861,7 @@ function createAppMenu() {
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
-                label: 'Preferences',
+                label: 'Preferences...',
                 accelerator: 'Cmd+,',
                 click: createPrefsWindow,
             }),

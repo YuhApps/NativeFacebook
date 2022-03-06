@@ -13,12 +13,18 @@ module.exports.get = function(key) {
         settings = JSON.parse(fs.readFileSync(CONFIG_JSON_PATH, 'utf-8')) || {}
         return settings[key]
     } else {
+        fs.writeFileSync(CONFIG_JSON_PATH, JSON.stringify({}))
         return undefined
     }
 }
 
 module.exports.refresh = function() {
-    settings = JSON.parse(fs.readFileSync(CONFIG_JSON_PATH, 'utf-8')) || {}
+    if (fs.existsSync(CONFIG_JSON_PATH)) {
+        settings = JSON.parse(fs.readFileSync(CONFIG_JSON_PATH, 'utf-8')) || {}
+    } else {
+        fs.writeFileSync(CONFIG_JSON_PATH, JSON.stringify({}))
+        settings = {}
+    }
 }
 
 module.exports.set = function(key, value) {

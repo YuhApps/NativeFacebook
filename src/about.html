@@ -12,6 +12,7 @@
             --web-wash: rgb(240, 242, 245);
             --web-wash-dark: #18191a;
             --fb-nav-dark: #242526;
+            --fb-color-dark: #d2e3fc;
         }
         body {
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
@@ -29,7 +30,7 @@
             color: var(--fb-color);
         }
         .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6, .dark strong {
-            color: lightgrey
+            color: var(--fb-color-dark)
         }
         .hidden {
             display: none;
@@ -85,7 +86,7 @@
             font-weight: bold;
         }
         .dark #app-version {
-            color: lightgrey;
+            color: var(--fb-color-dark);
         }
     </style>
 </head>
