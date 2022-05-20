@@ -1,4 +1,4 @@
-const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, shell, screen, systemPreferences, TouchBar, webContents } = require('electron')
+const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const { setup: setuPushReceiver } = require('electron-push-receiver')
 const { platform } = require('os')
@@ -8,7 +8,7 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const BUILD_DATE = '2022.03.05'
+const BUILD_DATE = '2022.05.18'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -75,9 +75,13 @@ app.whenReady().then(() => {
 
 app.on('activate', (event, hasVisibleWindows) => {
     let badgeCount = app.getBadgeCount()
-    if (BrowserWindow.getAllWindows().length === 0 || mainWindow.isDestroyed()) {
+    if (BrowserWindow.getAllWindows().length === 0 || mainWindow === null || mainWindow.isDestroyed()) {
         createMainWindow()
-    } else if (mainWindow && !hasVisibleWindows) {
+    } else if (hasVisibleWindows && mainWindow && !mainWindow.isDestroyed()) {
+        let focusedWindow = BrowserWindow.getFocusedWindow()
+        mainWindow.showInactive()
+        focusedWindow.show()
+    } else if (mainWindow) {
         mainWindow.show()
     }
     app.show()
@@ -95,7 +99,7 @@ app.on('open-url', (event, url) => {
 })
 
 app.on('new-window-for-tab', (event) => {
-    let window = createBrowserWindow('src/blank.html', undefined, true)
+    let window = createBrowserWindow('src/blank.html', { blank: true, show: true })
     BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
     window.show()
     window.focus()
@@ -322,12 +326,21 @@ async function askRevertToTheDefaultBrowser(show) {
  * @see createContextMenuForWindow
  * @returns The window to be created.
  */
-function createBrowserWindow(url, bounds, blank) {
-    return titleBarAppearance === '0' ? createBrowserWindowWithSystemTitleBar(url, bounds, blank)
-                                      : createBrowserWindowWithCustomTitleBar(url, bounds, blank)
+function createBrowserWindow(url, options) {
+    let window = titleBarAppearance === '0' ? createBrowserWindowWithSystemTitleBar(url, options)
+                                            : createBrowserWindowWithCustomTitleBar(url, options)
+    
+    window.on('enter-full-screen', () => {
+        window.setMinimumSize(600, 600)
+    })
+    window.on('exit-full-screen', () => {
+        window.setMinimumSize(800, 600)
+    })
+    return window
 }
 
-function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
+function createBrowserWindowWithSystemTitleBar(url, options) {
+    let { bounds, blank, show } = options || { bounds: undefined, blank: false, show: true }
     let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.get('max') || '0' // Windows and Linux only
     let window = new BrowserWindow({
@@ -338,7 +351,7 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
         minHeight: 600,
         minWidth: 800,
         show: false,
-        title: "   New Tab",
+        title: "New Tab",
         webviewTag: true,
         webPreferences: {
             webSecurity: true,
@@ -350,8 +363,9 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     if (max === '1') {
         window.maximize()
     }
-    window.focus()
-    window.show()
+    if (show) {
+        window.show()
+    }
 
     if (blank) {
         window.webContents.loadFile(url).then(() => {
@@ -397,6 +411,12 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
             menu.getMenuItemById('app-menu-go-forward').enabled = window.webContents.canGoForward()
         }
     }))
+    window.webContents.on('enter-html-full-screen', () => {
+        window.toggleTabBar()
+    })
+    window.webContents.on('leave-html-full-screen', () => {
+        window.toggleTabBar()
+    })
     window.webContents.session.on('will-download', (event, item, webContents) => {
         handleDownload(item, webContents)
     })
@@ -422,7 +442,8 @@ function createBrowserWindowWithSystemTitleBar(url, bounds, blank) {
     return window
 }
 
-function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
+function createBrowserWindowWithCustomTitleBar(url, options) {
+    let { bounds, blank, show } = options || { bounds: undefined, blank: false, show: options ? options.blank : true }
     let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.get('max') || '0' // Windows and Linux only
     let titleBarHeight = process.platform === 'win32' ? 32 : 28
@@ -453,7 +474,9 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     if (max === '1') {
         window.maximize()
     }
-    window.show()
+    if (show) {
+        window.show()
+    }
     // Title
     let titleView = new BrowserView({
         webPreferences: {
@@ -467,8 +490,8 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
     // Main content
     let mainView = new BrowserView({
-        scrollBounce: true, 
         webPreferences: {
+            scrollBounce: true, 
             spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
             contextIsolation: true,
@@ -503,9 +526,11 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
             mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
         }
     })
+    
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
         titleView.webContents.send('update-title', title)
+        if (window && !window.isDestroyed()) window.setTitle(title)
         if (titleBarHeight > 100) titleView.webContents.openDevTools()
     })
     // Create context menu for each window
@@ -559,11 +584,15 @@ function createBrowserWindowWithCustomTitleBar(url, bounds, blank) {
             mainView.webContents.destroy()
             window.removeBrowserView(titleView)
             window.removeBrowserView(mainView)
+            titleView = null
+            mainView = null
         } else if (acb === '2' || (acb === '1' && powerMonitor.onBatteryPower)) {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
             window.removeBrowserView(titleView)
             window.removeBrowserView(mainView)
+            titleView = null
+            mainView = null
         }
     })
     return window
@@ -582,7 +611,7 @@ function handleDownload(item, webContents) {
  * @see createBrowserWindow
  */
 function createMainWindow(url) {
-    mainWindow = createBrowserWindow(url || FACEBOOK_URL, undefined)
+    mainWindow = createBrowserWindow(url || FACEBOOK_URL)
     mainWindow.on('focus', () => {
         let title = mainWindow.getTitle()
         if (title.startsWith('(')) {
@@ -713,7 +742,7 @@ function createPrefsWindow() {
             webPreferences: {
                 webSecurity: true,
                 tabbingIdentifier: 'Prefs',
-                scrollBounce: titleBarAppearance === '0',
+                scrollBounce: true,
                 plugins: true,
                 nodeIntegration: true,
                 enableRemoteModule: true,
@@ -730,9 +759,7 @@ function createPrefsWindow() {
             let menu = Menu.getApplicationMenu()
             if (menu !== null) {
                 menu.getMenuItemById('pip').visible = pip === '1'
-                menu.getMenuItemById('pip-sep').visible = pip === '1'
                 menu.getMenuItemById('dev-tools').visible = dev === '1'
-                menu.getMenuItemById('dev-tools-sep').visible = dev === '1'
             }
         })
         prefsWindow.on('closed', () => {
@@ -792,6 +819,7 @@ function createDownloadsWindow() {
             titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
+                scrollBounce: true,
                 tabbingIdentifier: 'Downloads',
                 plugins: true,
                 nodeIntegration: true,
@@ -1018,7 +1046,8 @@ function createAppMenu() {
                     } else if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
                     } else {
-                        mainWindow = createBrowserWindow(FACEBOOK_URL)
+                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
+                        mainWindow = createBrowserWindow(FACEBOOK_URL, { bounds })
                     }
                 },
             }),
@@ -1034,7 +1063,7 @@ function createAppMenu() {
                         browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        mainWindow = createBrowserWindow(MESSENGER_URL, bounds)
+                        mainWindow = createBrowserWindow(MESSENGER_URL, { bounds })
                     }
                 },
             }),
@@ -1049,7 +1078,8 @@ function createAppMenu() {
                     } else if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
                     } else {
-                        mainWindow = createBrowserWindow(INSTAGRAM_URL)
+                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
+                        mainWindow = createBrowserWindow(INSTAGRAM_URL, { bounds })
                     }
                 },
             }),
@@ -1059,7 +1089,7 @@ function createAppMenu() {
                 enabled: titleBarAppearance === '0',
                 visible: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    let window = createBrowserWindow('src/blank.html', undefined, true)
+                    let window = createBrowserWindow('src/blank.html', { blank: true, show: true })
                     if (mainWindow.isDestroyed()) {
                         window.show()
                     } else {
@@ -1074,9 +1104,7 @@ function createAppMenu() {
                 label: 'New Blank Window',
                 accelerator: 'Cmd+N',
                 enabled: true,
-                click: (menuItem, browserWindow, event) => {
-                    createBrowserWindow('src/blank.html', undefined, true)
-                },
+                click: (menuItem, browserWindow, event) => createBrowserWindow('src/blank.html', { blank: true, show: true })
             }),
             new MenuItem({
                 type: 'separator',
@@ -1084,16 +1112,10 @@ function createAppMenu() {
             new MenuItem({
                 label: 'Downloads',
                 accelerator: 'Cmd+Shift+J',
-                click: (item, window, event) => {
-                    createDownloadsWindow()
-                }
+                click: (item, window, event) => createDownloadsWindow()
             }),
-            new MenuItem({
-                type: 'separator',
-            }),
-            new MenuItem({
-                role: 'close',
-            }),
+            new MenuItem({ type: 'separator' }),
+            new MenuItem({ role: 'close' }),
         ],
     })
 
@@ -1109,7 +1131,6 @@ function createAppMenu() {
             new MenuItem({ role: 'resetZoom' }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'togglefullscreen' }),
-            new MenuItem({ type: 'separator', visible: pip === '1', id: 'pip-sep' }),
             new MenuItem({
                 label: 'Toggle Picture in Picture',
                 id: 'pip',
@@ -1120,7 +1141,6 @@ function createAppMenu() {
                     }
                 }
             }),
-            new MenuItem({ type: 'separator', visible: dev === '1', id: 'dev-tools-sep' }),
             new MenuItem({ 
                 id: 'dev-tools',
                 label: 'Toggle Developer Tools',
@@ -1137,7 +1157,7 @@ function createAppMenu() {
     })
 
     // Window menu
-    let window = new MenuItem({ role: 'windowMenu' })
+    let window = new MenuItem({ role: 'windowMenu', id: 'window-menu' })
 
     // Help menu
     let help = new MenuItem({
@@ -1163,43 +1183,43 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     let menu = new Menu()
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
+    let focusedWindow = BrowserWindow.getFocusedWindow()
+    if (focusedWindow && focusedWindow.isFullScreen() && process.platform === 'darwin') {
+        menu.append(new MenuItem({
+            label: 'Exit Full Screen mode',
+            click: (menuItem, browserWindow, event) => {
+                browserWindow.setFullScreen(false)
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator'
+        }))
+    }
     if (linkURL) {
         menu.append(new MenuItem({
             label: 'Open Link in New Background Tab',
-            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText)),
+            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText.trim())),
             click: (menuItem, browserWindow, event) => {
+                let windows = BrowserWindow.getAllWindows()
+                let finalWindow = windows[windows.length === 1 ? 0 : 1]
                 if (browserWindow) {
-                    let finalWindow, windows = BrowserWindow.getAllWindows()
-                    if (windows.length === 1) {
-                        finalWindow = windows[0]
-                    } else {
-                        finalWindow = windows[1]
-                    }
-                    if (linkURL) {
-                        finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
-                    } else {
-                        finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
-                    }
+                    browserWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim(), { show: false }))
                     browserWindow.focus()
+                } else {
+                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim(), { show: false }))
                 }
             }
         }))
         menu.append(new MenuItem({
             label: 'Open Link in New Foreground Tab',
-            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText)),
+            visible: process.platform === 'darwin' && titleBarAppearance === '0' && (linkURL || isLink(selectionText.trim())),
             click: (menuItem, browserWindow, event) => {
+                let windows = BrowserWindow.getAllWindows()
+                let finalWindow = windows[windows.length === 1 ? 0 : 1]
                 if (browserWindow) {
-                    let finalWindow, windows = BrowserWindow.getAllWindows()
-                    if (windows.length === 1) {
-                        finalWindow = windows[0]
-                    } else {
-                        finalWindow = windows[1]
-                    }
-                    if (linkURL) {
-                        finalWindow.addTabbedWindow(createBrowserWindow(linkURL))
-                    } else {
-                        finalWindow.getAllWindows()[1].addTabbedWindow(createBrowserWindow(selectionText.trim()))
-                    }
+                    browserWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim()))
+                } else {
+                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim())) 
                 }
             }
         }))
@@ -1207,9 +1227,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             label: 'Open Link in New Window',
             visible: (process.platform !== 'darwin' || titleBarAppearance !== '0' )&& (linkURL || isLink(selectionText)),
             click: (menuItem, browserWindow, event) => {
-                if (browserWindow) {
-                    createBrowserWindow(linkURL ? linkURL : selectionText.trim())
-                }
+                createBrowserWindow(linkURL ? linkURL : selectionText.trim())
             }
         }))
         menu.append(new MenuItem({
@@ -1443,7 +1461,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         menu.append(new MenuItem({
             label: 'New Blank Window',
             click: (menuItem, browserWindow, event) => {
-                let window = createBrowserWindow('src/blank.html', undefined, true)
+                let window = createBrowserWindow('src/blank.html', { blanks: true })
                 if (mainWindow.isDestroyed()) {
                     window.show()
                 } else {
@@ -1468,6 +1486,13 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
                 if (browserWindow) {
                     webContents.executeJavaScript(PIP_JS_EXE)
                 }
+            }
+        }))
+        menu.append(new MenuItem({
+            label: 'Toggle Full screen mode',
+            click: (menuItem, browserWindow, event) => {
+                let isFullScreen = browserWindow.isFullScreen()
+                browserWindow.setFullScreen(!isFullScreen)
             }
         }))
     }
@@ -1602,11 +1627,11 @@ function createTouchBarForWindow(window) {
                     click: () => {
                         let browserWindow = BrowserWindow.getFocusedWindow()
                         if (browserWindow && useTab) {
-                            browserWindow.addTabbedWindow(createBrowserWindow('src/blank.html', undefined, true))
+                            browserWindow.addTabbedWindow(createBrowserWindow('src/blank.html', { blank: true, show: true }))
                         } else if (mainWindow.isDestroyed()) {
-                            mainWindow = createBrowserWindow('src/blank.html', undefined, true)
+                            mainWindow = createBrowserWindow('src/blank.html', { blank: true, show: true })
                         } else {
-                            createBrowserWindow('src/blank.html', undefined, true)
+                            createBrowserWindow('src/blank.html', { blank: true, show: true })
                         }
                     }
                 }),

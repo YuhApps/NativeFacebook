@@ -14,14 +14,14 @@
             --fb-color-dark: #d2e3fc;
         }
         body {
-            background: white;
+            background: var(--web-wash);
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
             margin: 0;
             padding: 0;
             user-select: none;
         }
         body.dark {
-            background: #242526;
+            background: var(--web-wash-dark);
             color-scheme: dark;
         }        
         header {
@@ -76,10 +76,8 @@
             margin: auto;
             max-width: 1280px;
             overflow-y: scroll;
-            position: fixed;
             padding-bottom: 20px;
-            padding-top: 20px;
-            top: 60px;
+            padding-top: 80px;
             width: 100%;
         }        
         .pref-wrapper.mac {
