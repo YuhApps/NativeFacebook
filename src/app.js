@@ -1,6 +1,7 @@
-const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, powerMonitor, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
+const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
-const { setup: setuPushReceiver } = require('electron-push-receiver')
+const pushReceiver = require('electron-fcm-push-receiver')
+const fetch = require('electron-fetch').default
 const { platform } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
@@ -8,7 +9,8 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const BUILD_DATE = '2022.05.18'
+const VERSION_CODE = 1
+const BUILD_DATE = '2022.09.25'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -45,7 +47,7 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
-let tempUrl, forceCloseMainWindow = false
+let tempUrl, forceCloseMainWindow = false, updateAvailable = false
 
 /** Basic Electron app events: */
 
@@ -71,6 +73,7 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
+    checkForUpdate()
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -78,9 +81,9 @@ app.on('activate', (event, hasVisibleWindows) => {
     if (BrowserWindow.getAllWindows().length === 0 || mainWindow === null || mainWindow.isDestroyed()) {
         createMainWindow()
     } else if (hasVisibleWindows && mainWindow && !mainWindow.isDestroyed()) {
-        let focusedWindow = BrowserWindow.getFocusedWindow()
         mainWindow.showInactive()
-        focusedWindow.show()
+        let focusedWindow = BrowserWindow.getFocusedWindow()
+        if (focusedWindow) focusedWindow.show()
     } else if (mainWindow) {
         mainWindow.show()
     }
@@ -174,8 +177,8 @@ ipcMain.on('app-context-menu', () => {
     }))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
-        label: 'About Facebook',
-        click: createAboutWindow
+        label: updateAvailable ? 'New update is available' : 'About Facebook',
+        click: updateAvailable ? openDownloadPageOnGitHub : createAboutWindow
     }))
     menu.popup({
         window: BrowserWindow.getFocusedWindow(),
@@ -185,8 +188,7 @@ ipcMain.on('app-context-menu', () => {
 })
 
 ipcMain.on('create-new-window', () => {
-    console.log('create-new-window')
-    createBrowserWindowWithCustomTitleBar('src/blank.html', undefined, true)
+    createBrowserWindowWithCustomTitleBar('src/blank.html', { blank: true, show: true })
 })
 
 ipcMain.on('delete-download-item', (event, id) => {
@@ -224,7 +226,11 @@ ipcMain.on('delete-all-previous-downloads', (event) => {
     fs.writeFileSync(DOWNLOADS_JSON_PATH, JSON.stringify([]))
 })
 
-ipcMain.on('open-about', () => createAboutWindow())
+ipcMain.on('open-about', (event) => createAboutWindow())
+
+ipcMain.on('open-dl-page', (event) => openDownloadPageOnGitHub())
+
+ipcMain.on('open-yh-page', (event) => createBrowserWindow('https://yuhapps.dev'))
 
 /** End of Basic Electron app events. */
 
@@ -233,25 +239,39 @@ ipcMain.on('open-about', () => createAboutWindow())
 function requestCameraAndMicrophonePermissions() {
     let cam_mic = settings.get('cam_mic') || '0'
     if (cam_mic === '0') return
+    let not_granted = ['denied', 'restricted', 'unknown']
     Promise.all([systemPreferences.getMediaAccessStatus('camera'), systemPreferences.getMediaAccessStatus('microphone')])
-        .then(async([cam, mic]) => {
-            if (cam !== 'granted' || mic !== 'granted') {
-                const { response } = await dialog.showMessageBox({
-                    defaultId: 1,
-                    message: 'Camera and Microphone permissions',
-                    detail: 'In order to allow livestreaming, Facebook (Unofficial) requires access to Camera and Microphone. Please open System Preferences, ' +
-                        'click on Security & Privacy, select the Privacy tab, and give Facebook (Unofficial) access to Camera and Microphone. If you do not ' +
-                        'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
-                    buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
-                })
+    .then(([cam, mic]) => {
+        if (not_granted.indexOf(cam) > -1 || not_granted.indexOf(mic) > -1) {
+            dialog.showMessageBox({
+                defaultId: 1,
+                message: 'Camera and Microphone permissions',
+                detail: 'In order to allow livestreaming, Facebook (Unofficial) requires access to Camera and Microphone. Please open System Preferences, ' +
+                    'click on Security & Privacy, select the Privacy tab, and give Facebook (Unofficial) access to Camera and Microphone. If you do not ' +
+                    'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
+                buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
+            }).then(({ response }) => {
                 if (response === 2) {
                     settings.set('cam_mic', '0')
                 } else if (response === 1) {
                     shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?privacy`)
+                    .then(() => {
+                        return Promise.all(
+                            systemPreferences.askForMediaAccess('camera'),
+                            systemPreferences.askForMediaAccess('microphone')
+                        )
+                    })
                 }
-            }
-        })
-        .catch((error) => console.log(error))
+            })
+        }
+        if (cam === 'not-determined') {
+            systemPreferences.askForMediaAccess('camera')
+        }
+        if (mic === 'not-determined') {
+            systemPreferences.askForMediaAccess('microphone')
+        }
+    })
+    
 }
 
 function isDefaultHttpProtocolClient() {
@@ -351,13 +371,14 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
         minHeight: 600,
         minWidth: 800,
         show: false,
-        title: "New Tab",
+        tabbingIdentifier: 'WebView',
+        title: 'Facebook',
         webviewTag: true,
         webPreferences: {
             webSecurity: true,
             spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
-            plugins: true
+            plugins: true,
         },
     })
     if (max === '1') {
@@ -380,13 +401,14 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
             }
         })
     }
-    setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
+    pushReceiver.setup(window.webContents)
     //
     window.webContents.on('did-finish-load', () => {
         if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
             window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
         }
+        
     })
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
@@ -464,6 +486,8 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         show: false,
         backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000',
         titleBarStyle: titleBarAppearance !== '0' ? 'hidden' : undefined,
+        tabbingIdentifier: 'WebView',
+        title: 'Facebook',
         webPreferences: {
             webSecurity: true,
             spellcheck: settings.get('spell') === '1' || false,
@@ -518,13 +542,14 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             }
         })
     }
-    setuPushReceiver(window.webContents)
     createTouchBarForWindow(window)
+    pushReceiver.setup(mainView.webContents)
     //
     mainView.webContents.on('did-finish-load', () => {
         if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
             mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
         }
+        
     })
     
     // Update title
@@ -674,10 +699,10 @@ function createAboutWindow() {
             y: y,
             center: false,
             alwaysOnTop: true,
-            frame: false,
             maximizable: false,
             minimizable: false,
             resizable: false,
+            tabbingIdentifier: 'About',
             titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             useContentSize: true,
             webPreferences: {
@@ -737,11 +762,11 @@ function createPrefsWindow() {
             focusable: true,
             maximizable: false,
             resizable: false,
+            tabbingIdentifier: 'Prefs',
             title: process.platform === 'darwin' ? 'Preferences' : '   Settings',
             titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
-                tabbingIdentifier: 'Prefs',
                 scrollBounce: true,
                 plugins: true,
                 nodeIntegration: true,
@@ -779,20 +804,20 @@ function createPrefsWindow() {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
-                        prefsWindow.webContents.send('dark', res, version)
+                        prefsWindow.webContents.send('dark', res, version, updateAvailable)
                         settings.set('prefs-dark', res)
                     })
                     .catch((e) => {
                         let dark = settings.get('prefs-dark') || false
-                        prefsWindow.webContents.send('dark', dark, version)
+                        prefsWindow.webContents.send('dark', dark, version, updateAvailable)
                     })
                 } else {
                     let dark = settings.get('prefs-dark') || false
-                    prefsWindow.webContents.send('dark', dark, version)
+                    prefsWindow.webContents.send('dark', dark, version, updateAvailable)
                 }
             } else {
                 let dark = settings.get('prefs-dark') || false
-                prefsWindow.webContents.send('dark', dark, version)
+                prefsWindow.webContents.send('dark', dark, version, updateAvailable)
             }
         })
     }
@@ -813,14 +838,13 @@ function createDownloadsWindow() {
             y: y,
             alwaysOnTop: true,
             focusable: true,
-            frame: false,
             maximizable: false,
             minimizable: true,
+            tabbingIdentifier: 'Downloads',
             titleBarStyle: process.platform === 'linux' ? 'default' : 'hidden',
             webPreferences: {
                 webSecurity: true,
                 scrollBounce: true,
-                tabbingIdentifier: 'Downloads',
                 plugins: true,
                 nodeIntegration: true,
                 enableRemoteModule: true,
@@ -861,6 +885,10 @@ function createDownloadsWindow() {
             handleDownload(item, webContents)
         })
     }
+}
+
+function openDownloadPageOnGitHub() {
+    createBrowserWindow('https://github.com/YuhApps/NativeFacebook/releases')
 }
 
 /**
@@ -1112,7 +1140,7 @@ function createAppMenu() {
             new MenuItem({
                 label: 'Downloads',
                 accelerator: 'Cmd+Shift+J',
-                click: (item, window, event) => createDownloadsWindow()
+                click: (item, browserWindow, event) => createDownloadsWindow()
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'close' }),
@@ -1157,18 +1185,15 @@ function createAppMenu() {
     })
 
     // Window menu
-    let window = new MenuItem({ role: 'windowMenu', id: 'window-menu' })
+    let window = new MenuItem({ role: 'windowMenu'})
 
     // Help menu
     let help = new MenuItem({
         label: 'Help',
         role: 'help',
-        submenu: [
-            new MenuItem({
-                label: 'Developed by YUH APPS'
-            })
-        ]
+        submenu: [ new MenuItem({ label: 'Developed by YUH APPS' })]
     })
+
     let template = [appMenu, file, edit, view, window, help]
     Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
@@ -1184,17 +1209,6 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
     let focusedWindow = BrowserWindow.getFocusedWindow()
-    if (focusedWindow && focusedWindow.isFullScreen() && process.platform === 'darwin') {
-        menu.append(new MenuItem({
-            label: 'Exit Full Screen mode',
-            click: (menuItem, browserWindow, event) => {
-                browserWindow.setFullScreen(false)
-            }
-        }))
-        menu.append(new MenuItem({
-            type: 'separator'
-        }))
-    }
     if (linkURL) {
         menu.append(new MenuItem({
             label: 'Open Link in New Background Tab',
@@ -1381,6 +1395,18 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         }))
     }
 
+    if (focusedWindow && focusedWindow.isFullScreen() && process.platform === 'darwin') {
+        menu.append(new MenuItem({
+            label: 'Exit Full Screen mode',
+            click: (menuItem, browserWindow, event) => {
+                browserWindow.setFullScreen(false)
+            }
+        }))
+        menu.append(new MenuItem({
+            type: 'separator'
+        }))
+    }
+
     /* To be used later if necessary
     menu.append(new MenuItem({
       label: 'Undo',
@@ -1461,7 +1487,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         menu.append(new MenuItem({
             label: 'New Blank Window',
             click: (menuItem, browserWindow, event) => {
-                let window = createBrowserWindow('src/blank.html', { blanks: true })
+                let window = createBrowserWindow('src/blank.html', { blank: true })
                 if (mainWindow.isDestroyed()) {
                     window.show()
                 } else {
@@ -1520,6 +1546,18 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         menu.append(new MenuItem({
             label: 'Settings',
             click: createPrefsWindow,
+        }))
+        menu.append(new MenuItem({
+            label: 'About Facebook (unofficial)',
+            click: createAboutWindow,
+        }))
+    }
+
+    if (updateAvailable) {
+        menu.append(new MenuItem({ type: 'separator' }))
+        menu.append(new MenuItem({
+            label: 'New version available',
+            click: openDownloadPageOnGitHub,
         }))
     }
 
@@ -1638,4 +1676,26 @@ function createTouchBarForWindow(window) {
             ]
         })
     )
+}
+
+function checkForUpdate() {
+    const cfuURL = 'https://yuhapps.dev/api/nfb/cfu'
+    const now = Date.now()
+    const lastUpdate = settings.get('cfu_last_fetch') || 0
+    if (now - lastUpdate > 86400000 * 7) {
+        fetch(cfuURL).then((res) => res.json())
+        .then(({ vc, vn }) => {
+            settings.set('cfu_last_fetch', now)
+            if (vc > VERSION_CODE) {
+                let notification = new Notification({
+                    title: 'Update available',
+                    body: 'There is a new update for Facebook (unofficial). Click here to download it.',
+                    silent: true
+                })
+                notification.on('click', (e) => openDownloadPageOnGitHub())
+                notification.show()
+                updateAvailable = true
+            }
+        })
+    }
 }

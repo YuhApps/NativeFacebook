@@ -16,6 +16,7 @@
         body {
             background: var(--web-wash);
             font-family: 'Roboto', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '.SFNSText-Regular', sans-serif;
+            height: 100%;
             margin: 0;
             padding: 0;
             user-select: none;
@@ -59,10 +60,6 @@
             width: 48px;
             -webkit-app-region: no-drag;
         }        
-        ul {
-            list-style: none;
-            overflow-y: scroll;
-        }        
         .hidden {
             display: none;
         }
@@ -73,13 +70,13 @@
             background: var(--web-wash);
             bottom: 0;
             left: 0;
-            margin: auto;
-            max-width: 1280px;
+            right: 0;
+            padding: 20px;
+            position: fixed;
             overflow-y: scroll;
-            padding-bottom: 20px;
-            padding-top: 80px;
-            width: 100%;
-        }        
+            top: 60px;
+        }   
+        /*     
         .pref-wrapper.mac {
             margin: auto;
             max-width: 1280px;
@@ -89,6 +86,7 @@
             position: relative !important;
             top: 0 !important;
         }
+        */
         .dark .pref-wrapper {
             background: var(--web-wash-dark);
         }        
@@ -214,6 +212,15 @@
         .dark #app-version {
             color: lightgrey;
         }
+        .cfu {
+            background: var(--warning-color);
+            color: #ffffff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .dark .cfu {
+            background: var(--warning-color-pressed);
+        }
     </style>
     <script>
         const { ipcRenderer } = require('electron')
@@ -243,6 +250,11 @@
         </button>
     </div>
     <div class="pref-wrapper">
+        <!-- CFU -->
+        <div class="pref mac tux win cfu hidden">
+            <p>There is a new version. Click here to download it.</p>
+        </div>
+
         <!-- TitleBar -->
         <div class="pref mac win">
             <p class="pref-title">Title Bar appearance (Requires restart):</p>
@@ -379,6 +391,10 @@
                 pref.classList.add('hidden')
             }
         })
+        document.querySelector('.cfu').onclick = (e) => {
+            ipcRenderer.send('open-dl-page')
+            window.close()
+        }
         document.querySelectorAll('input[type="radio"]').forEach((radio) => {
             radio.checked = (settings.get(radio.name) || '0') === radio.value
             radio.addEventListener('change', () => {
@@ -401,15 +417,18 @@
             currentWebContents.session.clearStorageData().then(window.close)
         }
 
-        ipcRenderer.on('dark', (e, dark, version) => {
+        ipcRenderer.on('dark', (e, dark, version, updateAvailable) => {
             if (dark) {
-                document.body.classList.add('dark')
+                body.classList.add('dark')
             } else {
-                document.body.classList.remove('dark')
+                body.classList.remove('dark')
             }
-            document.body.classList.remove('transparent')
+            body.classList.remove('transparent')
             appVersion.textContent = ' ' + version
             appVersion.onclick = (e) => ipcRenderer.send('open-about')
+            if (updateAvailable) {
+                document.querySelector('.cfu').classList.remove('hidden')
+            }
         })
     </script>
 </body>

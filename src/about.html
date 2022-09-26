@@ -81,12 +81,19 @@
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
-        #app-version {
+        #app-version, #yuh {
             color: var(--fb-color);
             font-weight: bold;
         }
-        .dark #app-version {
+        .dark #app-version, .dark #yuh {
             color: var(--fb-color-dark);
+        }
+        #yuh {
+            border-bottom: 1px solid var(--fb-color);
+            cursor: pointer;
+        }
+        .dark #yuh {
+            border-bottom: 1px solid var(--fb-color-dark);
         }
     </style>
 </head>
@@ -98,7 +105,7 @@
             <h3>Facebook (Unofficial)</h3>
             <p>Version <span id="app-version"></span></p>
             <p>Developed by <strong>YUH APPS</strong>. Made with <strong>Electron by GitHub</strong>. "Facebook" is a registered trademark of Facebook, Inc.</p>
-            <p>© 2021 YUH APPS. All rights reserved.</p>
+            <p><span id="yuh">© 2022 YUH APPS. All rights reserved.</span></p>
         </div>
     </div>
     <div class="window-buttons-wrapper hidden">
@@ -138,6 +145,11 @@
         }
 
         appVersion.textContent = remote.app.getVersion()
+
+    document.querySelector('#yuh').onclick = (e) => {
+        ipcRenderer.send('open-yh-page')
+        window.close()
+    }
 
         ipcRenderer.on('dark', (e, dark, version) => {
             if (dark) document.body.classList.add('dark')

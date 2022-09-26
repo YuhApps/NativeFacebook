@@ -8,3 +8,4 @@
 * 1.0.10: Custom title bar for Windows and macOS.
 * 1.0.20: Improved custom title bar.
 * 1.0.30: Bug fixes, improved custom title bar, and TouchBar on MacBook Pros.
+* 1.0.50: First official release.

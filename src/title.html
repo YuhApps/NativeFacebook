@@ -172,9 +172,11 @@
             if (max === '1') {
                 maxButton.classList.add('hidden')
                 unmaxButton.classList.remove('hidden')
+                if (platform === 'win32') document.body.style.marginRight = '12px'
             } else {
                 maxButton.classList.remove('hidden')
                 unmaxButton.classList.add('hidden')
+                if (platform === 'win32') document.body.style.marginRight = '0'
             }
 
             closeButton.onclick = (e) => currentWindow.close()
@@ -194,6 +196,7 @@
                 windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
+                if (platform === 'win32') document.body.style.marginRight = '12px'
             })
             currentWindow.on('unmaximize', () => {
                 maxButton.classList.remove('hidden')
@@ -201,6 +204,7 @@
                 windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
+                if (platform === 'win32') document.body.style.marginRight = '0'
             })
         } else {
             titleView.classList.add('mac')
