@@ -47,7 +47,7 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
-let tempUrl, forceCloseMainWindow = false, updateAvailable = false
+let tempUrl, forceCloseMainWindow = false, updateAvailable = false, sandbox = false
 
 /** Basic Electron app events: */
 
@@ -56,6 +56,7 @@ electronRemote.initialize()
 app.whenReady().then(() => {
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
+    sandbox = settings.get('sbox') || false
     global.recentDownloads = [] 
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
@@ -378,6 +379,7 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
             webSecurity: true,
             spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
+            sandbox: sandbox,
             plugins: true,
         },
     })
@@ -492,6 +494,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             webSecurity: true,
             spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
+            sandbox: sandbox,
             plugins: true
         },
     })
@@ -515,6 +518,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     // Main content
     let mainView = new BrowserView({
         webPreferences: {
+            sandbox: sandbox,
             scrollBounce: true, 
             spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
@@ -708,8 +712,8 @@ function createAboutWindow() {
             webPreferences: {
                 contextIsolation: false,
                 enableRemoteModule: true,
-                nodeIntegration: true,
-                devTools: true
+                devTools: true,
+                nodeIntegration: true
             }
         })
         electronRemote.enable(aboutWindow.webContents)
