@@ -44,6 +44,11 @@ const PIP_JS_EXE =
 const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.esr5mh6w.e9989ue4.r7d6kgcz.rq0escxv.nhd2j8a9.j83agx80'
     + '.p7hjln8o.kvgmc6g5.cxmmr5t8.oygrvhab.hcukyx3x.jb3vyjys.rz4wbd8a.qt6c0cv9.a8nywdso.i1ao9s8h.esuyzwwr.f1sip0of.lzcic4wl.n00je7tq.'
     + 'arfg74bv.qs9ysxi8.k77z8yql.l9j0dhe7.abiwlrkh.p8dawk7l.bp9cbjyn.cbu4d94t.datstx6m.taijpn5t.k4urcfbm").click()'
+const SEARCH_ENGINES = {
+    '0': 'https://www.google.com/?q=',
+    '1': 'https://duckduckgo.com/?q=',
+}
+
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
@@ -178,7 +183,7 @@ ipcMain.on('app-context-menu', () => {
     }))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
-        label: updateAvailable ? 'New update is available' : 'About Facebook',
+        label: updateAvailable ? 'New update is available' : 'About Native Facebook',
         click: updateAvailable ? openDownloadPageOnGitHub : createAboutWindow
     }))
     menu.popup({
@@ -718,7 +723,7 @@ function createAboutWindow() {
         })
         electronRemote.enable(aboutWindow.webContents)
         aboutWindow.loadFile('src/about.html')
-        aboutWindow.setTitle('About Facebook (Unofficial)')
+        aboutWindow.setTitle('About Native Facebook')
         aboutWindow.on('close', () => aboutWindow = null)
         aboutWindow.webContents.on('did-finish-load', (e) => {
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
@@ -916,7 +921,7 @@ function createAppMenu() {
         label: 'Facebook',
         submenu: [
             new MenuItem({
-                label: 'About Facebook',
+                label: 'About Native Facebook',
                 click: createAboutWindow
             }),
             new MenuItem({ type: 'separator' }),
@@ -1212,6 +1217,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     let menu = new Menu()
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
+    let search = settings.get('search') || '0'
     let focusedWindow = BrowserWindow.getFocusedWindow()
     if (linkURL) {
         menu.append(new MenuItem({
@@ -1274,26 +1280,29 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         }))
     }
 
-    // macOS Look Up and Search with Google
-    if (process.platform === 'darwin' && selectionText.trim()) {
+    // Search with Google
+    if (selectionText.trim()) {
+        if (process.platform === 'darwin') {
+            menu.append(new MenuItem({
+                id: 'look-up',
+                label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
+                click: (menuItem, browserWindow, event) => {
+                    if (webContents) webContents.showDefinitionForSelection()
+                }
+            }))
+            menu.append(new MenuItem({
+                type: 'separator',
+            }))
+        }
         menu.append(new MenuItem({
-            id: 'look-up',
-            label: 'Look Up \"' + (selectionText.length < 61 ? selectionText : selectionText.substring(0, 58) + "...") + '\"',
+            id: 'search',
+            label: 'Search with ' + (search === '0' ? 'Google' : 'Duck Duck Go'),
             click: (menuItem, browserWindow, event) => {
-                if (webContents) webContents.showDefinitionForSelection()
-            }
-        }))
-        menu.append(new MenuItem({
-            type: 'separator',
-        }))
-        menu.append(new MenuItem({
-            id: 'google-search',
-            label: 'Search with Google',
-            click: (menuItem, browserWindow, event) => {
+                let query = SEARCH_ENGINES[search]
                 if (titleBarAppearance === '0') {
-                    browserWindow.addTabbedWindow(createBrowserWindow('https://www.google.com/search?q=' + selectionText))
+                    browserWindow.addTabbedWindow(createBrowserWindow(query + selectionText))
                 } else {
-                    createBrowserWindow('https://www.google.com/search?q=' + selectionText)
+                    createBrowserWindow(query + selectionText)
                 }
             }
         }))
@@ -1552,7 +1561,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             click: createPrefsWindow,
         }))
         menu.append(new MenuItem({
-            label: 'About Facebook (unofficial)',
+            label: 'About Native Facebook',
             click: createAboutWindow,
         }))
     }
