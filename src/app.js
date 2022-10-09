@@ -543,7 +543,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
                 mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
             }
-        })
+        }).then(() => mainView.webContents.focus())
     } else {
         mainView.webContents.loadURL(url).then(() => {
             if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
