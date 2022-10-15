@@ -300,7 +300,7 @@ function requestToBeTheDefaultBrowser() {
     })
 }
 
-async function askRevertToTheDefaultBrowser(show) {
+async function askRevertToTheDefaultBrowser(menuItem, show) {
     if (show) {
         if (platform === 'darwin') {
             const { response_0 } = await dialog.showMessageBox({
@@ -575,6 +575,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
+            console.log('AAA')
             menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
             menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
         }
@@ -932,11 +933,11 @@ function createAppMenu() {
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
-                label: 'Set default browser',
+                label: 'Set as default browser',
                 click: (menuItem, browserWindow, event) => {
                     let checked = isDefaultHttpProtocolClient()
                     if (checked) {
-                        askRevertToTheDefaultBrowser(checked)
+                        askRevertToTheDefaultBrowser(menuItem, checked)
                     } else {
                         requestToBeTheDefaultBrowser()
                     }
@@ -1181,6 +1182,7 @@ function createAppMenu() {
             new MenuItem({ 
                 id: 'dev-tools',
                 label: 'Toggle Developer Tools',
+                visible: dev === '1',
                 click: (menuItem, browserWindow, event) => {
                     let window = BrowserWindow.getFocusedWindow()
                     if (!window) return
@@ -1559,6 +1561,17 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         menu.append(new MenuItem({
             label: 'Settings',
             click: createPrefsWindow,
+        }))
+        menu.append(new MenuItem({
+            label: isDefaultHttpProtocolClient() ? 'Resign from default browser' : 'Set Native Facebook as the default browser',
+            click: (menuItem, browserWindow, event) => {
+                let checked = isDefaultHttpProtocolClient()
+                if (checked) {
+                    askRevertToTheDefaultBrowser(checked)
+                } else {
+                    requestToBeTheDefaultBrowser()
+                }
+            }
         }))
         menu.append(new MenuItem({
             label: 'About Native Facebook',
