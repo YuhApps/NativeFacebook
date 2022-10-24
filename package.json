@@ -28,7 +28,10 @@
             "target": [
                 {
                     "target": "dir",
-                    "arch": ["arm64", "x64"]
+                    "arch": [
+                        "arm64",
+                        "x64"
+                    ]
                 }
             ]
         },
@@ -38,18 +41,27 @@
             "target": [
                 {
                     "target": "deb",
-                    "arch": ["ia32", "x64"]
+                    "arch": [
+                        "ia32",
+                        "x64"
+                    ]
                 },
                 {
                     "target": "tar.xz",
-                    "arch": ["ia32", "x64"]
+                    "arch": [
+                        "ia32",
+                        "x64"
+                    ]
                 }
             ]
         },
         "win": {
             "target": {
                 "target": "msi",
-                "arch": ["ia32", "x64"]
+                "arch": [
+                    "ia32",
+                    "x64"
+                ]
             }
         },
         "protocols": [
@@ -80,8 +92,8 @@
     },
     "devDependencies": {
         "bufferutil": "4",
-        "electron": "^17.4.7",
-        "electron-builder": "^23.3.3",
+        "electron": "^21.2.0",
+        "electron-builder": "^23.6.0",
         "electron-notarize": "^1.2.1",
         "utf-8-validate": "5"
     },

@@ -61,7 +61,8 @@ electronRemote.initialize()
 app.whenReady().then(() => {
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
-    sandbox = settings.get('sbox') || false
+    sandbox = settings.get('sbox') === '1'
+    console.log('sanbox', settings.get('sbox'))
     global.recentDownloads = [] 
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
@@ -406,16 +407,21 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
             if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
                 window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
             }
-        })
+        }).then(() => window.focus())
     }
     createTouchBarForWindow(window)
     pushReceiver.setup(window.webContents)
     //
     window.webContents.on('did-finish-load', () => {
+        if (titleBarAppearance === '2') {
+            window.webContents.executeJavaScript('document.body.classList.add("dark")')
+        } else if (titleBarAppearance === '3') {
+            window.webContents.executeJavaScript('document.body.classList.add("black")')
+        }
+        window.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
             window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
         }
-        
     })
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
@@ -528,7 +534,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
             contextIsolation: true,
-            preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
+            // preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
         }
     })
     mainView.setAutoResize({ x: false, y: false, width: true, height: true })
@@ -537,6 +543,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     // Load URL or File
     electronRemote.enable(titleView.webContents)
+    electronRemote.enable(mainView.webContents)
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
         mainView.webContents.loadFile(url).then(() => {
@@ -549,16 +556,21 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
                 mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
             }
-        })
+        }).then(() => window.focus())
     }
     createTouchBarForWindow(window)
     pushReceiver.setup(mainView.webContents)
     //
     mainView.webContents.on('did-finish-load', () => {
+        if (titleBarAppearance === '2') {
+            mainView.webContents.executeJavaScript('document.body.classList.add("dark")')
+        } else if (titleBarAppearance === '3') {
+            mainView.webContents.executeJavaScript('document.body.classList.add("black")')
+        }
+        mainView.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
             mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
         }
-        
     })
     
     // Update title
@@ -575,7 +587,6 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
-            console.log('AAA')
             menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
             menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
         }
@@ -638,6 +649,8 @@ function handleDownload(item, webContents) {
     item['url'] = item.getURL()
     item['startTime'] = item.getStartTime()
     global.recentDownloads = [item, ...global.recentDownloads]
+    new Notification({ body: 'Download started', title: item.getFilename() }).show()
+    item.on('done', (event, state) => new Notification({ body: 'Download ' + state, title: item.getFilename() }).show())
 }
 
 /**
