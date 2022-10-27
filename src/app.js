@@ -2,7 +2,7 @@ const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuI
 const electronRemote = require('@electron/remote/main')
 const pushReceiver = require('electron-fcm-push-receiver')
 const fetch = require('electron-fetch').default
-const { platform } = require('os')
+const { platform, release } = require('os')
 const path = require('path')
 const validUrlUtf8 = require('valid-url-utf8')
 const fs = require('fs')
@@ -62,7 +62,6 @@ app.whenReady().then(() => {
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
     sandbox = settings.get('sbox') === '1'
-    console.log('sanbox', settings.get('sbox'))
     global.recentDownloads = [] 
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
@@ -821,24 +820,31 @@ function createPrefsWindow() {
             }
         })
         prefsWindow.webContents.on('did-finish-load', (e) => {
+            let macRelease = release()
+            let montereyOrLower = process.platform === 'darwin' && Number(macRelease.substring(0, macRelease.indexOf('.'))) <= 21
+            let title = montereyOrLower ? 'Preferences' : 'Settings'
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
             if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
                 let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
+                        prefsWindow.webContents.send('title', title)
                         prefsWindow.webContents.send('dark', res, version, updateAvailable)
                         settings.set('prefs-dark', res)
                     })
                     .catch((e) => {
+                        prefsWindow.webContents.send('title', title)
                         let dark = settings.get('prefs-dark') || false
                         prefsWindow.webContents.send('dark', dark, version, updateAvailable)
                     })
                 } else {
+                    prefsWindow.webContents.send('title', title)
                     let dark = settings.get('prefs-dark') || false
                     prefsWindow.webContents.send('dark', dark, version, updateAvailable)
                 }
             } else {
+                prefsWindow.webContents.send('title', title)
                 let dark = settings.get('prefs-dark') || false
                 prefsWindow.webContents.send('dark', dark, version, updateAvailable)
             }
@@ -931,6 +937,9 @@ function isLink(text) {
 function createAppMenu() {
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
+    let macRelease = release()
+    let isVentura = Number(macRelease.substring(0, macRelease.indexOf('.'))) > 21
+    console.log(isVentura)
     let appMenu = new MenuItem({
         label: 'Facebook',
         submenu: [
@@ -940,7 +949,7 @@ function createAppMenu() {
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
-                label: 'Preferences...',
+                label: isVentura ? 'Settings...' : 'Preferences...',
                 accelerator: 'Cmd+,',
                 click: createPrefsWindow,
             }),

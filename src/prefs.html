@@ -407,7 +407,6 @@
             currentWindow.on('minimize', (e) => windowButtons.forEach((button) => button.classList.remove('hover')))
         }
 
-        document.querySelector('h3').textContent = platform === 'darwin' ? 'Preferences' : 'Settings'
         document.querySelectorAll('.pref').forEach((pref) => {
             if (platform === 'darwin' && !pref.classList.contains('mac')) {
                 pref.classList.add('hidden')
@@ -456,6 +455,7 @@
                 document.querySelector('.cfu').classList.remove('hidden')
             }
         })
+        ipcRenderer.on('title', (e, title) => document.querySelector('h3').textContent = title)
     </script>
 </body>
 
