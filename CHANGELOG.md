@@ -9,3 +9,4 @@
 * 1.0.20: Improved custom title bar.
 * 1.0.30: Bug fixes, improved custom title bar, and TouchBar on MacBook Pros.
 * 1.0.50: First official release.
+* 1.0.60: Bug fixes. See Releases page for more info.

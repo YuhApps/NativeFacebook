@@ -9,8 +9,8 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 1
-const BUILD_DATE = '2022.09.25'
+const VERSION_CODE = 2
+const BUILD_DATE = '2023.01.05'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -173,6 +173,25 @@ powerMonitor.on('resume', (event) => {
 // Handle app context menu invoke on Windows
 ipcMain.on('app-context-menu', () => {
     let menu = new Menu()
+	menu.append(new MenuItem({
+		label: 'Facebook Home',
+		click: (menuItem, browserWindow, event) => {
+			browserWindow.getBrowserViews()[1].webContents.loadURL(FACEBOOK_URL)
+		}
+	}))
+	menu.append(new MenuItem({
+		label: 'New Blank Window',
+		click: (menuItem, browserWindow, event) => {
+			let window = createBrowserWindow('src/blank.html', { blank: true })
+			if (mainWindow.isDestroyed()) {
+				window.show()
+			} else {
+				window.show()
+				window.focus()
+			}
+		},
+	}))
+	menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
         label: 'Settings',
         click: createPrefsWindow,
@@ -181,6 +200,22 @@ ipcMain.on('app-context-menu', () => {
         label: 'Downloads',
         click: createDownloadsWindow,
     }))
+	menu.append(new MenuItem({ type: 'separator' }))
+	menu.append(new MenuItem({
+		label: 'Toggle Full screen mode',
+		click: (menuItem, browserWindow, event) => {
+			let isFullScreen = browserWindow.isFullScreen()
+			browserWindow.setFullScreen(!isFullScreen)
+		}
+	}))
+	menu.append(new MenuItem({
+		label: 'Toggle Picture in Picture',
+		id: 'pip',
+		visible: (settings.get('pip') || '0') === '1',
+		click: (menuItem, browserWindow, event) => {
+			browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+		}
+	}))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
         label: updateAvailable ? 'New update is available' : 'About Native Facebook',
@@ -217,7 +252,6 @@ ipcMain.on('re-download-file', (event, id, url) => {
 
 ipcMain.on('show-download-item-in-files', (event, savePath) => {
     if (fs.existsSync(savePath)) {
-        downloadsWindow.minimize()
         shell.showItemInFolder(savePath)
     }
 })
@@ -397,31 +431,18 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
 
     if (blank) {
         window.webContents.loadFile(url).then(() => {
-            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
-                window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            if (titleBarAppearance === '2') {
+                window.webContents.executeJavaScript('document.body.classList.add("dark")')
+            } else if (titleBarAppearance === '3') {
+                window.webContents.executeJavaScript('document.body.classList.add("black")')
             }
+            window.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         })
     } else {
-        window.webContents.loadURL(url).then(() => {
-            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
-                window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
-            }
-        }).then(() => window.focus())
+        window.webContents.loadURL(url).then(() => window.focus())
     }
     createTouchBarForWindow(window)
     pushReceiver.setup(window.webContents)
-    //
-    window.webContents.on('did-finish-load', () => {
-        if (titleBarAppearance === '2') {
-            window.webContents.executeJavaScript('document.body.classList.add("dark")')
-        } else if (titleBarAppearance === '3') {
-            window.webContents.executeJavaScript('document.body.classList.add("black")')
-        }
-        window.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
-        if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && window.webContents.getURL().startsWith(FACEBOOK_URL))) {
-            window.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
-        }
-    })
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
     window.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
@@ -546,31 +567,18 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
         mainView.webContents.loadFile(url).then(() => {
-            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
-                mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
+            if (titleBarAppearance === '2') {
+                mainView.webContents.executeJavaScript('document.body.classList.add("dark")')
+            } else if (titleBarAppearance === '3') {
+                mainView.webContents.executeJavaScript('document.body.classList.add("black")')
             }
+            mainView.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         }).then(() => mainView.webContents.focus())
     } else {
-        mainView.webContents.loadURL(url).then(() => {
-            if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
-                mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
-            }
-        }).then(() => window.focus())
+        mainView.webContents.loadURL(url).then(() => window.focus())
     }
     createTouchBarForWindow(window)
     pushReceiver.setup(mainView.webContents)
-    //
-    mainView.webContents.on('did-finish-load', () => {
-        if (titleBarAppearance === '2') {
-            mainView.webContents.executeJavaScript('document.body.classList.add("dark")')
-        } else if (titleBarAppearance === '3') {
-            mainView.webContents.executeJavaScript('document.body.classList.add("black")')
-        }
-        mainView.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
-        if (forceDarkScrollbar === '2' || (forceDarkScrollbar === '1' && mainView.webContents.getURL().startsWith(FACEBOOK_URL))) {
-            mainView.webContents.executeJavaScript('document.documentElement.style.colorScheme = "dark"')
-        }
-    })
     
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
@@ -677,7 +685,6 @@ function createMainWindow(url) {
         let acb = settings.get('acb') || '0'
         if (process.platform !== 'darwin' || forceCloseMainWindow) {
             forceCloseMainWindow = false
-            return
         } else if (acb === '0' || (acb === '1' && !powerMonitor.onBatteryPower)) {
             event.preventDefault()
             mainWindow.hide()
@@ -865,7 +872,6 @@ function createDownloadsWindow() {
         downloadsWindow = new BrowserWindow({
             x: x,
             y: y,
-            alwaysOnTop: true,
             focusable: true,
             maximizable: false,
             minimizable: true,
@@ -967,8 +973,10 @@ function createAppMenu() {
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'services' }),
+            new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'hide' }),
             new MenuItem({ role: 'hideOthers' }),
+            new MenuItem({ role: 'unhide' }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'quit' }),
         ],
@@ -1166,14 +1174,6 @@ function createAppMenu() {
                 enabled: true,
                 click: (menuItem, browserWindow, event) => createBrowserWindow('src/blank.html', { blank: true, show: true })
             }),
-            new MenuItem({
-                type: 'separator',
-            }),
-            new MenuItem({
-                label: 'Downloads',
-                accelerator: 'Cmd+Shift+J',
-                click: (item, browserWindow, event) => createDownloadsWindow()
-            }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({ role: 'close' }),
         ],
@@ -1214,6 +1214,12 @@ function createAppMenu() {
                     else                                webContents.openDevTools()
                 }
             }),
+            new MenuItem({ type: 'separator' }),
+            new MenuItem({
+                label: 'Downloads',
+                accelerator: 'Cmd+Shift+J',
+                click: (item, browserWindow, event) => createDownloadsWindow()
+            }),
         ]
     })
 
@@ -1224,7 +1230,7 @@ function createAppMenu() {
     let help = new MenuItem({
         label: 'Help',
         role: 'help',
-        submenu: [ new MenuItem({ label: 'Developed by YUH APPS' })]
+        submenu: [ new MenuItem({ label: 'Developed by YUH APPS', click: () => shell.openExternal('https://yuhapps.dev') })]
     })
 
     let template = [appMenu, file, edit, view, window, help]
@@ -1242,6 +1248,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
     let search = settings.get('search') || '0'
+	let sctxm = titleBarAppearance === '0' ? '0' : settings.get('sctxm') || '0'
     let focusedWindow = BrowserWindow.getFocusedWindow()
     if (linkURL) {
         menu.append(new MenuItem({
@@ -1513,7 +1520,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             if (webContents) webContents.loadURL(webContents.getURL().replace('https://m.facebook.com', 'https://www.facebook.com'))
         }
     }))
-    if (process.platform !== 'darwin') {
+    if (process.platform !== 'darwin' && sctxm === '0') {
         menu.append(new MenuItem({ type: 'separator' }))
         menu.append(new MenuItem({
             label: 'Facebook Home',
@@ -1530,7 +1537,6 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
                 } else {
                     window.show()
                     window.focus()
-                    createTouchBarForWindow(window)
                 }
             },
         }))
@@ -1578,22 +1584,11 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         }))
     }
 
-    if (process.platform !== 'darwin') {
+    if (process.platform !== 'darwin' && sctxm === '0') {
         menu.append(new MenuItem({ type: 'separator' }))
         menu.append(new MenuItem({
             label: 'Settings',
             click: createPrefsWindow,
-        }))
-        menu.append(new MenuItem({
-            label: isDefaultHttpProtocolClient() ? 'Resign from default browser' : 'Set Native Facebook as the default browser',
-            click: (menuItem, browserWindow, event) => {
-                let checked = isDefaultHttpProtocolClient()
-                if (checked) {
-                    askRevertToTheDefaultBrowser(checked)
-                } else {
-                    requestToBeTheDefaultBrowser()
-                }
-            }
         }))
         menu.append(new MenuItem({
             label: 'About Native Facebook',

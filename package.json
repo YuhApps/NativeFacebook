@@ -1,7 +1,7 @@
 {
-    "name": "native-facebook",
+    "name": "facebook",
     "productName": "Facebook",
-    "version": "1.0.50",
+    "version": "1.0.60",
     "description": "A Facebook client for macOS, Windows and Linux",
     "homepage": "https://yuhapps.dev",
     "main": "src/app.js",
@@ -23,7 +23,37 @@
             "gatekeeperAssess": false,
             "extendInfo": {
                 "NSMicrophoneUsageDescription": "YuhApps' Native Facebook require access to your Microphone for live streaming.",
-                "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming."
+                "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming.",
+                "CFBundleURLTypes": [
+                    {
+                        "CFBundleURLName": "http URL",
+                        "CFBundleURLSchemes": [
+                            "http"
+                        ]
+                    },
+                    {
+                        "CFBundleURLName": "Secure http URL",
+                        "CFBundleURLSchemes": [
+                            "https"
+                        ]
+                    }
+                ],
+                "CFBundleDocumentTypes": [
+                    {
+                        "CFBundleTypeName": "HTML document",
+                        "CFBundleTypeRole": "Viewer",
+                        "LSItemContentTypes": [
+                            "public.html"
+                        ]
+                    },
+                    {
+                        "CFBundleTypeName": "XHTML document",
+                        "CFBundleTypeRole": "Viewer",
+                        "LSItemContentTypes": [
+                            "public.xhtml"
+                        ]
+                    }
+                ]
             },
             "target": [
                 {
@@ -84,7 +114,6 @@
         "@electron/remote": "^2.0.8",
         "electron-fcm-push-receiver": "^2.1.7",
         "electron-fetch": "^1.7.4",
-        "electron-settings": "^4.0.2",
         "node-gyp": "^7.1.2",
         "ts-node": "^9.1.1",
         "typescript": "^4.2.3",
@@ -92,8 +121,8 @@
     },
     "devDependencies": {
         "bufferutil": "4",
-        "electron": "^21.2.0",
-        "electron-builder": "^23.6.0",
+        "electron": "^22.0.0",
+        "electron-builder": "^22.10.3",
         "electron-notarize": "^1.2.1",
         "utf-8-validate": "5"
     },
