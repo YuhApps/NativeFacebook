@@ -9,7 +9,7 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 2
+const VERSION_CODE = 3
 const BUILD_DATE = '2023.01.05'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
@@ -220,6 +220,10 @@ ipcMain.on('app-context-menu', () => {
     menu.append(new MenuItem({
         label: updateAvailable ? 'New update is available' : 'About Native Facebook',
         click: updateAvailable ? openDownloadPageOnGitHub : createAboutWindow
+    }))
+    menu.append(new MenuItem({
+        label: 'Developed by YUH APPS',
+        click: () => createBrowserWindow('https://yuhapps.dev')
     }))
     menu.popup({
         window: BrowserWindow.getFocusedWindow(),
@@ -1230,7 +1234,7 @@ function createAppMenu() {
     let help = new MenuItem({
         label: 'Help',
         role: 'help',
-        submenu: [ new MenuItem({ label: 'Developed by YUH APPS', click: () => shell.openExternal('https://yuhapps.dev') })]
+        submenu: [new MenuItem({ label: 'Developed by YUH APPS', click: () => createBrowserWindow('https://yuhapps.dev') })]
     })
 
     let template = [appMenu, file, edit, view, window, help]
@@ -1330,7 +1334,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             label: 'Search with ' + (search === '0' ? 'Google' : 'Duck Duck Go'),
             click: (menuItem, browserWindow, event) => {
                 let query = SEARCH_ENGINES[search]
-                if (titleBarAppearance === '0') {
+                if (process.platform === 'darwin' && titleBarAppearance === '0') {
                     browserWindow.addTabbedWindow(createBrowserWindow(query + selectionText))
                 } else {
                     createBrowserWindow(query + selectionText)

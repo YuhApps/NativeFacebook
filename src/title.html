@@ -154,7 +154,6 @@
 
         if (titleBarSettings === '2') titleView.classList.add('dark')
         else if (titleBarSettings === '3') titleView.classList.add('black')
-        console.log(platform)
         if (platform === 'win32') {
             titleView.classList.add('win')
             let img = document.querySelector('img')
@@ -196,7 +195,7 @@
                 windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
-                if (platform === 'win32') document.body.style.marginRight = '12px'
+                document.body.style.marginRight = '12px'
             })
             currentWindow.on('unmaximize', () => {
                 maxButton.classList.remove('hidden')
@@ -204,7 +203,7 @@
                 windowButtons.forEach((button) => {
                     button.classList.remove('hover')
                 })
-                if (platform === 'win32') document.body.style.marginRight = '0'
+                document.body.style.marginRight = '0'
             })
         } else {
             titleView.classList.add('mac')

@@ -6,8 +6,6 @@ const CONFIG_JSON_PATH = app.getPath('userData') + path.sep + 'settings.json'
 
 let settings
 
-console.log(CONFIG_JSON_PATH)
-
 module.exports.get = function(key) {
     if (settings) {
         return settings[key]
