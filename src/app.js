@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 3
-const BUILD_DATE = '2023.01.05'
+const BUILD_DATE = '2023.06.18'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -579,10 +579,14 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             mainView.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         }).then(() => mainView.webContents.focus())
     } else {
-        mainView.webContents.loadURL(url).then(() => window.focus())
+        mainView.webContents.loadURL(url).then(() => window.focus()).catch((e) => console.log(e))
     }
     createTouchBarForWindow(window)
     pushReceiver.setup(mainView.webContents)
+    mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
+        console.log(errorCode)
+        console.log('ed', errorDescription)
+    })
     
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
@@ -604,8 +608,13 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     }))
     mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
-        createBrowserWindow(url)
-        return { action: 'deny' }
+        console.log('abcdef')
+        try {
+            createBrowserWindow(url)
+            return { action: 'allow' }
+        } catch (e) {
+            console.log(e)
+        }
     })
     mainView.webContents.on('enter-html-full-screen', () => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
@@ -949,7 +958,6 @@ function createAppMenu() {
     let pip = settings.get('pip') || '0'
     let macRelease = release()
     let isVentura = Number(macRelease.substring(0, macRelease.indexOf('.'))) > 21
-    console.log(isVentura)
     let appMenu = new MenuItem({
         label: 'Facebook',
         submenu: [

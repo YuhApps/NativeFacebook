@@ -32,8 +32,8 @@
     }
     
     input {
-        background: #f8f8f8;
-        border: 2px solid #a0a0a0;
+        background: #eaeaea;
+        border: none;
         border-radius: 28px;
         font-size: 20px;
         margin-top: 20vh;
@@ -44,7 +44,7 @@
     }
 
     input::placeholder {
-        color: #b0b0b0;
+        color: #808080;
     }
 
     input:focus::placeholder {
@@ -52,7 +52,6 @@
     }
 
     .dark input, .black input {
-        border: 2px solid #202020;
         background: #404040;
         color: white;
     }
@@ -76,6 +75,7 @@
     }
 
     .sites {
+        align-content: center;
         display: flex;
         flex-direction: row;
         justify-content: center;
@@ -85,7 +85,17 @@
     }
 
     .sites a {
-        margin: 20px;
+        align-content: center;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        border-radius: 50%;
+        margin: 12px;
+        padding: 12px;
+    }
+
+    .sites a:hover {
+        background: #80808060;
     }
 
     .sites svg path {

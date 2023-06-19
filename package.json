@@ -1,8 +1,9 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.0.60",
+    "version": "1.0.80",
     "description": "A Facebook client for macOS, Windows and Linux",
+    "author": "Yuh Apps",
     "homepage": "https://yuhapps.dev",
     "main": "src/app.js",
     "scripts": {
@@ -21,6 +22,7 @@
             "category": "public.app-category.social-networking",
             "hardenedRuntime": true,
             "gatekeeperAssess": false,
+            "identity": "F47CD442F00C4C9BF01E923872500439C6896F6E",
             "extendInfo": {
                 "NSMicrophoneUsageDescription": "YuhApps' Native Facebook require access to your Microphone for live streaming.",
                 "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming.",
@@ -57,13 +59,16 @@
             },
             "target": [
                 {
-                    "target": "dir",
+                    "target": "pkg",
                     "arch": [
                         "arm64",
                         "x64"
                     ]
                 }
             ]
+        },
+        "pkg": {
+            "identity": "7AD6AB65F8E24A426BF723067C65B3850B4337F5"
         },
         "linux": {
             "icon": "build/icon.icns",
@@ -86,6 +91,23 @@
             ]
         },
         "win": {
+            "fileAssociations": [
+                {
+                    "ext": "htm"
+                },
+                {
+                    "ext": "html"
+                },
+                {
+                    "ext": "shtml"
+                },
+                {
+                    "ext": "xht"
+                },
+                {
+                    "ext": "xhtml"
+                }
+            ],
             "target": {
                 "target": "msi",
                 "arch": [
@@ -121,8 +143,8 @@
     },
     "devDependencies": {
         "bufferutil": "4",
-        "electron": "^22.0.0",
-        "electron-builder": "^22.10.3",
+        "electron": "^24.4.1",
+        "electron-builder": "^23.6.0",
         "electron-notarize": "^1.2.1",
         "utf-8-validate": "5"
     },
@@ -130,6 +152,5 @@
     "keywords": [
         "Facebook"
     ],
-    "author": "YuhApps",
     "license": "ISC"
 }
