@@ -9,7 +9,7 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 3
+const VERSION_CODE = 4
 const BUILD_DATE = '2023.06.18'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
@@ -506,6 +506,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.get('max') || '0' // Windows and Linux only
     let titleBarHeight = process.platform === 'win32' ? 32 : 28
+    let rightMargin = process.platform === 'win32' ? 14 : 0
     if (titleBarAppearance === 0) {
         nativeTheme.themeSource = process.platform === 'win32' ? 'light' : 'system'
     } else if (titleBarAppearance === '1') {
@@ -549,7 +550,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     })
     titleView.setAutoResize({ x: true, y: true, horizontal: true, vertical: false })
     window.addBrowserView(titleView)
-    titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+    titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width - (max === '1' ? rightMargin : 0), height: titleBarHeight })
     // Main content
     let mainView = new BrowserView({
         webPreferences: {
@@ -564,7 +565,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.setAutoResize({ x: false, y: false, width: true, height: true })
     mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
     window.addBrowserView(mainView)
-    mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+    mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
     // Load URL or File
     electronRemote.enable(titleView.webContents)
     electronRemote.enable(mainView.webContents)
@@ -602,6 +603,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
+            console.log(mainView.webContents.getURL())
             menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
             menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
         }
@@ -611,7 +613,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         console.log('abcdef')
         try {
             createBrowserWindow(url)
-            return { action: 'allow' }
+            return { action: 'deny' }
         } catch (e) {
             console.log(e)
         }
@@ -629,6 +631,14 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     })
     window.on('leave-full-screen', () => {
         mainView.webContents.executeJavaScript('document.exitFullscreen()')
+    })
+    window.on('maximize', (e) => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
+    })
+    window.on('unmaximize', (e) => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
@@ -1187,7 +1197,7 @@ function createAppMenu() {
                 click: (menuItem, browserWindow, event) => createBrowserWindow('src/blank.html', { blank: true, show: true })
             }),
             new MenuItem({ type: 'separator' }),
-            new MenuItem({ role: 'close' }),
+            new MenuItem({ role: 'close' })
         ],
     })
 
