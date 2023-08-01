@@ -507,9 +507,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     let max = settings.get('max') || '0' // Windows and Linux only
     let titleBarHeight = process.platform === 'win32' ? 32 : 28
     let rightMargin = process.platform === 'win32' ? 14 : 0
-    if (titleBarAppearance === 0) {
-        nativeTheme.themeSource = process.platform === 'win32' ? 'light' : 'system'
-    } else if (titleBarAppearance === '1') {
+    if (titleBarAppearance === '1') {
         nativeTheme.themeSource = 'light'
     } else {
         nativeTheme.themeSource = 'dark'
@@ -524,6 +522,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         show: false,
         backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000',
         titleBarStyle: titleBarAppearance !== '0' ? 'hidden' : undefined,
+        frame: titleBarAppearance !== '0',
         tabbingIdentifier: 'WebView',
         title: 'Facebook',
         webPreferences: {
@@ -569,6 +568,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     // Load URL or File
     electronRemote.enable(titleView.webContents)
     electronRemote.enable(mainView.webContents)
+    // TODO: Separate Mac and Windows titlebar, as well as add support for Linux
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
         mainView.webContents.loadFile(url).then(() => {
@@ -679,8 +679,12 @@ function handleDownload(item, webContents) {
     item['url'] = item.getURL()
     item['startTime'] = item.getStartTime()
     global.recentDownloads = [item, ...global.recentDownloads]
-    new Notification({ body: 'Download started', title: item.getFilename() }).show()
-    item.on('done', (event, state) => new Notification({ body: 'Download ' + state, title: item.getFilename() }).show())
+    new Notification({ body: 'Download started', title: item.getFilename(), silent: settings.get('dl-notif') === '0' }).show()
+    item.on('done', (event, state) => new Notification({
+        body: 'Download ' + state,
+        title: item.getFilename(),
+        silent: settings.get('dl-notif') === '0',
+    }).show())
 }
 
 /**
@@ -1113,7 +1117,7 @@ function createAppMenu() {
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
-                label: 'Facebook Home',
+                label: 'Go to Facebook Home',
                 accelerator: 'Cmd+Shift+F',
                 id: 'fb-home',
                 click: (menuItem, browserWindow, event) => {
@@ -1142,6 +1146,18 @@ function createAppMenu() {
                 },
             }),
             new MenuItem({
+                label: 'New Facebook Window',
+                visible: titleBarAppearance !== '0',
+                enabled: titleBarAppearance !== '0',
+                click: (menuItem, browserWindow, event) => {
+                    if (mainWindow.isDestroyed()) {
+                        createMainWindow(FACEBOOK_URL)
+                    } else {
+                        createBrowserWindow(FACEBOOK_URL)
+                    }
+                },
+            }),
+            new MenuItem({
                 label: 'New Messenger Tab',
                 accelerator: 'Cmd+M',
                 visible: titleBarAppearance === '0',
@@ -1158,6 +1174,18 @@ function createAppMenu() {
                 },
             }),
             new MenuItem({
+                label: 'New Messenger Window',
+                visible: titleBarAppearance !== '0',
+                enabled: titleBarAppearance !== '0',
+                click: (menuItem, browserWindow, event) => {
+                    if (mainWindow.isDestroyed()) {
+                        createMainWindow(MESSENGER_URL)
+                    } else {
+                        createBrowserWindow(MESSENGER_URL)
+                    }
+                },
+            }),
+            new MenuItem({
                 label: 'New Instagram Tab',
                 accelerator: 'Cmd+I',
                 visible: titleBarAppearance === '0',
@@ -1170,6 +1198,18 @@ function createAppMenu() {
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
                         mainWindow = createBrowserWindow(INSTAGRAM_URL, { bounds })
+                    }
+                },
+            }),
+            new MenuItem({
+                label: 'New Instagram Window',
+                visible: titleBarAppearance !== '0',
+                enabled: titleBarAppearance !== '0',
+                click: (menuItem, browserWindow, event) => {
+                    if (mainWindow.isDestroyed()) {
+                        createMainWindow(INSTAGRAM_URL)
+                    } else {
+                        createBrowserWindow(INSTAGRAM_URL)
                     }
                 },
             }),
@@ -1747,20 +1787,22 @@ function checkForUpdate() {
     const cfuURL = 'https://yuhapps.dev/api/nfb/cfu'
     const now = Date.now()
     const lastUpdate = settings.get('cfu_last_fetch') || 0
+    console.log(now - lastUpdate)
     if (now - lastUpdate > 86400000 * 7) {
         fetch(cfuURL).then((res) => res.json())
         .then(({ vc, vn }) => {
             settings.set('cfu_last_fetch', now)
+            console.log(vc, vn)
             if (vc > VERSION_CODE) {
                 let notification = new Notification({
                     title: 'Update available',
-                    body: 'There is a new update for Facebook (unofficial). Click here to download it.',
-                    silent: true
+                    body: 'There is a new update for Native Facebook. Click here to download it.',
+                    silent: false
                 })
                 notification.on('click', (e) => openDownloadPageOnGitHub())
                 notification.show()
                 updateAvailable = true
             }
-        })
+        }).catch((error) => console.log(error))
     }
 }
