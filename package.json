@@ -1,17 +1,17 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.0.85",
+    "version": "1.1.0",
     "description": "A Facebook client for macOS, Windows and Linux",
-    "author": "Yuh Apps",
+    "author": "Yuh Apps <yuhapps@gmail.com>",
     "homepage": "https://yuhapps.dev",
     "main": "src/app.js",
     "scripts": {
         "start": "npx electron .",
-        "pack": "npx electron-builder",
-        "pack-mac": "npx electron-builder && open dist/mac",
-        "pack-linux": "npx electron-builder && open dist/",
-        "pack-win": "npx electron-builder && start dist\\"
+        "pack": "electron-builder",
+        "pack-mac": "electron-builder -m --x64 --arm64 && open dist/",
+        "pack-linux": "electron-builder -l --x64 tar.xz deb && open dist/",
+        "pack-win": "electron-builder -w zip nsis --x64&& start dist\\"
     },
     "build": {
         "appId": "dev.yuhapps.facebook.katana",
@@ -23,8 +23,8 @@
             "hardenedRuntime": true,
             "gatekeeperAssess": false,
             "extendInfo": {
-                "NSMicrophoneUsageDescription": "YuhApps' Native Facebook require access to your Microphone for live streaming.",
-                "NSCameraUsageDescription": "YuhApps' Native Facebook require access to your Camera for live streaming.",
+                "NSMicrophoneUsageDescription": "YuhApps' Native Facebook requires access to your Microphone for live streaming.",
+                "NSCameraUsageDescription": "YuhApps' Native Facebook requires access to your Camera for live streaming.",
                 "CFBundleURLTypes": [
                     {
                         "CFBundleURLName": "http URL",
@@ -56,38 +56,11 @@
                     }
                 ]
             },
-            "target": [
-                {
-                    "target": "pkg",
-                    "arch": [
-                        "arm64",
-                        "x64"
-                    ]
-                }
-            ]
-        },
-        "pkg": {
-            
+            "notarize": false
         },
         "linux": {
             "icon": "build/icon.icns",
-            "maintainer": "YuhApps",
-            "target": [
-                {
-                    "target": "deb",
-                    "arch": [
-                        "ia32",
-                        "x64"
-                    ]
-                },
-                {
-                    "target": "tar.xz",
-                    "arch": [
-                        "ia32",
-                        "x64"
-                    ]
-                }
-            ]
+            "maintainer": "YuhApps <yuhapps@gmail.com>"
         },
         "win": {
             "fileAssociations": [
@@ -106,14 +79,7 @@
                 {
                     "ext": "xhtml"
                 }
-            ],
-            "target": {
-                "target": "msi",
-                "arch": [
-                    "ia32",
-                    "x64"
-                ]
-            }
+            ]
         },
         "protocols": [
             {
@@ -135,6 +101,7 @@
         "@electron/remote": "^2.0.8",
         "electron-fcm-push-receiver": "^2.1.7",
         "electron-fetch": "^1.7.4",
+        "electron-updater": "^6.1.1",
         "node-gyp": "^7.1.2",
         "ts-node": "^9.1.1",
         "typescript": "^4.2.3",
@@ -142,9 +109,7 @@
     },
     "devDependencies": {
         "bufferutil": "4",
-        "electron": "^24.4.1",
-        "electron-builder": "^23.6.0",
-        "electron-notarize": "^1.2.1",
+        "electron": "^25.6.0",
         "utf-8-validate": "5"
     },
     "postinstall": "electron-builder install-app-deps",

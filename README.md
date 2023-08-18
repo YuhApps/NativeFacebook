@@ -1,8 +1,10 @@
 # UNOFFICIAL FACEBOOK DESKTOP #
 
-This is an **unofficial** Facebook desktop app, which is actually an Electron (https://www.electronjs.org) app wraps the Facebook website with my additional features to make it feel a bit native.
+This is an **unofficial** Facebook desktop app, which is actually an [Electron](https://www.electronjs.org) app wraps the Facebook website with my additional touches to make it feel a bit native.
 
-## FOR CONSUMERS ##
+#### THE PROJECT IS IN MAINTENANCE MODE. FUTURE UPDATES WILL SIMPLY CONSIST OF NEW ELECTRON AND NODE VERSIONS. NO NEW FEATURES WILL BE ADDED.
+
+## FOR CONSUMERS
 
 So why using this app instead of just simply open Facebook website in a browser? Well, this app is faster. Plus, as we all know, Facebook has their SDK used by so many websites out there. So Facebook can track your web history. They know what sites you visited. Even there is no "Sign in with Facebook" button on a website does not mean it does not have Facebook SDK bundled. By using this app, your Facebook social life is isolated from your browser.
 
@@ -10,7 +12,7 @@ However, please don't expect this app to behave like Facebook mobile app. It's j
 
 For info about what's new in every release, see CHANGELOG.md
 
-## FOR DEVELOPERS ##
+## FOR DEVELOPERS
 
 If you wish to build and extend the app to add your customizations, it's very easy to do so. Node.js is the only base requirement here. Then, in your Terminal, just simply execute these super familiar commands:
 
