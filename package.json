@@ -15,6 +15,8 @@
     },
     "build": {
         "appId": "dev.yuhapps.facebook.katana",
+        "afterSign": "./notarize.js",
+        "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
         "extraResources": [
             "assets/**"
         ],
@@ -22,7 +24,6 @@
             "category": "public.app-category.social-networking",
             "hardenedRuntime": true,
             "gatekeeperAssess": false,
-            "afterSign": "./notarize.js",
             "extendInfo": {
                 "NSMicrophoneUsageDescription": "YuhApps' Native Facebook requires access to your Microphone for live streaming.",
                 "NSCameraUsageDescription": "YuhApps' Native Facebook requires access to your Camera for live streaming.",
@@ -64,6 +65,7 @@
             "maintainer": "YuhApps <yuhapps@gmail.com>"
         },
         "win": {
+            "artifactName": "${productName}-${version}-windows-${arch}.${ext}",
             "fileAssociations": [
                 {
                     "ext": "htm"

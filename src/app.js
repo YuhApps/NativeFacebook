@@ -1,6 +1,7 @@
 const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const pushReceiver = require('electron-fcm-push-receiver')
+const { autoUpdater } = require('electron-updater')
 const fetch = require('electron-fetch').default
 const { platform, release } = require('os')
 const path = require('path')
@@ -79,7 +80,7 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
-    checkForUpdate()
+    autoUpdater.checkForUpdatesAndNotify()
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
