@@ -22,6 +22,7 @@
             "category": "public.app-category.social-networking",
             "hardenedRuntime": true,
             "gatekeeperAssess": false,
+            "afterSign": "./notarize.js",
             "extendInfo": {
                 "NSMicrophoneUsageDescription": "YuhApps' Native Facebook requires access to your Microphone for live streaming.",
                 "NSCameraUsageDescription": "YuhApps' Native Facebook requires access to your Camera for live streaming.",
