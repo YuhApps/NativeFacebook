@@ -10,8 +10,8 @@
         "start": "npx electron .",
         "pack": "electron-builder",
         "pack-mac": "electron-builder -m --x64 --arm64 && open dist/",
-        "pack-linux": "electron-builder -l --x64 tar.xz deb && open dist/",
-        "pack-win": "electron-builder -w zip nsis --x64&& start dist\\"
+        "pack-linux": "electron-builder -l tar.xz deb && open dist/",
+        "pack-win": "electron-builder -w zip nsis --x64 && start dist\\"
     },
     "build": {
         "appId": "dev.yuhapps.facebook.katana",
@@ -20,6 +20,9 @@
         "extraResources": [
             "assets/**"
         ],
+        "dmg": {
+            "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+        },
         "mac": {
             "category": "public.app-category.social-networking",
             "hardenedRuntime": true,
