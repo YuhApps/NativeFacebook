@@ -1,6 +1,5 @@
 const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
-const pushReceiver = require('electron-fcm-push-receiver')
 const { autoUpdater } = require('electron-updater')
 const fetch = require('electron-fetch').default
 const { platform, release } = require('os')
@@ -447,7 +446,6 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
         window.webContents.loadURL(url).then(() => window.focus())
     }
     createTouchBarForWindow(window)
-    pushReceiver.setup(window.webContents)
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
     window.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
@@ -584,7 +582,6 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         mainView.webContents.loadURL(url).then(() => window.focus()).catch((e) => console.log(e))
     }
     createTouchBarForWindow(window)
-    pushReceiver.setup(mainView.webContents)
     mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
         console.log(errorCode)
         console.log('ed', errorDescription)
