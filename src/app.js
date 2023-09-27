@@ -9,13 +9,14 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 5
-const BUILD_DATE = '2023.08.18'
+const VERSION_CODE = 6
+const BUILD_DATE = '2023.09.26'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
 const MESSENGER_URL = 'https://www.messenger.com'
 const INSTAGRAM_URL = 'https://www.instagram.com'
+const THREADS_URL = 'https://www.threads.net'
 const FACEBOOK = 'facebook'
 const MESSENGER = 'messenger'
 const INSTAGRAM = 'instagram'
@@ -583,8 +584,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     }
     createTouchBarForWindow(window)
     mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
-        console.log(errorCode)
-        console.log('ed', errorDescription)
+        
     })
     
     // Update title
@@ -601,14 +601,12 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
-            console.log(mainView.webContents.getURL())
             menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
             menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
         }
     }))
     mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
-        console.log('abcdef')
         try {
             createBrowserWindow(url)
             return { action: 'deny' }
@@ -1212,6 +1210,34 @@ function createAppMenu() {
                 },
             }),
             new MenuItem({
+                label: 'New Threads Tab',
+                accelerator: 'Cmd+T',
+                visible: titleBarAppearance === '0',
+                enabled: titleBarAppearance === '0',
+                click: (menuItem, browserWindow, event) => {
+                    if (mainWindow.isDestroyed()) {
+                        createMainWindow(THREADS_URL)
+                    } else if (browserWindow) {
+                        browserWindow.addTabbedWindow(createBrowserWindow(THREADS_URL))
+                    } else {
+                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
+                        mainWindow = createBrowserWindow(THREADS_URL, { bounds })
+                    }
+                },
+            }),
+            new MenuItem({
+                label: 'New Threads Window',
+                visible: titleBarAppearance !== '0',
+                enabled: titleBarAppearance !== '0',
+                click: (menuItem, browserWindow, event) => {
+                    if (mainWindow.isDestroyed()) {
+                        createMainWindow(THREADS_URL)
+                    } else {
+                        createBrowserWindow(THREADS_URL)
+                    }
+                },
+            }),
+            new MenuItem({
                 label: 'New Blank Tab',
                 accelerator: 'Cmd+T',
                 enabled: titleBarAppearance === '0',
@@ -1785,7 +1811,6 @@ function checkForUpdate() {
     const cfuURL = 'https://yuhapps.dev/api/nfb/cfu'
     const now = Date.now()
     const lastUpdate = settings.get('cfu_last_fetch') || 0
-    console.log(now - lastUpdate)
     if (now - lastUpdate > 86400000 * 7) {
         fetch(cfuURL).then((res) => res.json())
         .then(({ vc, vn }) => {
