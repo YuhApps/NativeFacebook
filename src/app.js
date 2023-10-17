@@ -9,8 +9,8 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 6
-const BUILD_DATE = '2023.09.26'
+const VERSION_CODE = 7
+const BUILD_DATE = '2023.10.17'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -675,11 +675,11 @@ function handleDownload(item, webContents) {
     item['url'] = item.getURL()
     item['startTime'] = item.getStartTime()
     global.recentDownloads = [item, ...global.recentDownloads]
-    new Notification({ body: 'Download started', title: item.getFilename(), silent: settings.get('dl-notif') === '0' }).show()
+    new Notification({ body: 'Download started', title: item.getFilename(), silent: true }).show()
     item.on('done', (event, state) => new Notification({
         body: 'Download ' + state,
         title: item.getFilename(),
-        silent: settings.get('dl-notif') === '0',
+        silent: true,
     }).show())
 }
 
