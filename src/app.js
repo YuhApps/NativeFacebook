@@ -81,7 +81,6 @@ app.whenReady().then(() => {
         tempUrl = undefined
     }
     autoUpdater.checkForUpdatesAndNotify().then((res) => updateAvailable = res.updateInfo.version > autoUpdater.currentVersion)
-    })
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
