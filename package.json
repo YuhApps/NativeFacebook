@@ -1,7 +1,7 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.1.2",
+    "version": "1.1.3",
     "description": "A Facebook client for macOS, Windows and Linux",
     "author": "Yuh Apps <yuhapps@gmail.com>",
     "homepage": "https://yuhapps.dev",

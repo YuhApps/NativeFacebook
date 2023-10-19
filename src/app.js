@@ -80,7 +80,8 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
-    autoUpdater.checkForUpdatesAndNotify()
+    autoUpdater.checkForUpdatesAndNotify().then((res) => updateAvailable = res.updateInfo.version > autoUpdater.currentVersion)
+    })
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -134,6 +135,8 @@ app.on('window-all-closed', () => {
     let acb = settings.get('acb') || '0'
     if (process.platform !== 'darwin' || acb === '3') {
         app.quit()
+    } else if (updateAvailable) {
+        autoUpdater.quitAndInstall()
     } else {
         let menu = Menu.getApplicationMenu()
         menu.getMenuItemById('app-menu-go-back').enabled = false
