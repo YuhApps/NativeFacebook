@@ -8,10 +8,10 @@
     "main": "src/app.js",
     "scripts": {
         "start": "npx electron .",
-        "pack": "electron-builder",
-        "pack-mac": "electron-builder -m --x64 --arm64 && open dist/",
-        "pack-linux": "electron-builder -l tar.xz deb && open dist/",
-        "pack-win": "electron-builder -w zip nsis --x64 && start dist\\"
+        "pack-all": "npm run pack-mac && npm run pack-windows && npm run pack-linux && open dist/",
+        "pack-mac": "npx electron-builder -m --x64 --arm64",
+        "pack-linux": "npx electron-builder -l deb tar.xz --x64",
+        "pack-windows": "npx electron-builder -w nsis zip --x64"
     },
     "build": {
         "appId": "dev.yuhapps.facebook.katana",
