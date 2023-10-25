@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 7
-const BUILD_DATE = '2023.10.17'
+const BUILD_DATE = '2023.10.25'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
