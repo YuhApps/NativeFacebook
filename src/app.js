@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 7
-const BUILD_DATE = '2023.10.25'
+const BUILD_DATE = '2023.11.04'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -80,7 +80,6 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
-    autoUpdater.checkForUpdatesAndNotify().then((res) => updateAvailable = res.updateInfo.version > autoUpdater.currentVersion)
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -588,12 +587,12 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
         
     })
-    
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
         titleView.webContents.send('update-title', title)
         if (window && !window.isDestroyed()) window.setTitle(title)
         if (titleBarHeight > 100) titleView.webContents.openDevTools()
+        let js = `document.querySelector("meta[name=theme-color]").content`
     })
     // Create context menu for each window
     mainView.webContents.on('context-menu', (event, params) => {
@@ -736,6 +735,9 @@ function createMainWindow(url) {
             app.setBadgeCount(badgeCount)
         })
     }
+    autoUpdater.checkForUpdatesAndNotify()
+    .then((res) => updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion)
+    .catch((error) => console.log(error))
     return mainWindow
 }
 

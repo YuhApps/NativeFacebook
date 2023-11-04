@@ -154,6 +154,9 @@
 
         if (titleBarSettings === '2') titleView.classList.add('dark')
         else if (titleBarSettings === '3') titleView.classList.add('black')
+        else if (titleBarSettings === '4') {
+            
+        }
         if (platform === 'win32') {
             titleView.classList.add('win')
             let img = document.querySelector('img')
@@ -220,7 +223,23 @@
                 }
             }
         }
-        ipcRenderer.on('update-title', (event, title) => titleText.textContent = title)
+        ipcRenderer.on('update-title', (event, title, themeColor) => {
+            titleText.textContent = title
+        })
+
+        function lumiananceFromRGB([r, g, b]) {
+            return r * 0.299 + g * 0.587 + b * 0.114;
+        }
+        function hexToRgb(hex) {
+            if (hex.startsWith('#')) hex = hex.substring(1)
+            let bigint = parseInt(hex, 16);
+            let r = (bigint >> 16) & 255;
+            let g = (bigint >> 8) & 255;
+            let b = bigint & 255
+            let ret = [r, g, b]
+            console.log(ret)
+            return ret
+        }
     </script>
 </body>
 </html>
