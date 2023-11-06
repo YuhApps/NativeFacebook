@@ -131,10 +131,16 @@ app.on('before-quit', (event) => {
 
 app.on('window-all-closed', () => {
     let acb = settings.get('acb') || '0'
-    if (process.platform !== 'darwin' || acb === '3') {
+    if (updateAvailable) {
+        dialog.showMessageBox({
+            message: 'Update will be installed after you click the "OK" button below.',
+            buttons: ['OK'],
+            noLink: true
+        }).then(({ response }) => {
+            autoUpdater.quitAndInstall()
+        })
+    } else if (process.platform !== 'darwin' || acb === '3') {
         app.quit()
-    } else if (updateAvailable) {
-        autoUpdater.quitAndInstall()
     } else {
         let menu = Menu.getApplicationMenu()
         menu.getMenuItemById('app-menu-go-back').enabled = false
