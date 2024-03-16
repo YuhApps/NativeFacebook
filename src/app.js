@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 8
-const BUILD_DATE = '2023.12.08'
+const BUILD_DATE = '2024.03.15'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -53,7 +53,7 @@ const SEARCH_ENGINES = {
 
 let aboutWindow, downloadsWindow, mainWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
-let tempUrl, forceCloseMainWindow = false, updateAvailable = false, sandbox = false
+let tempUrl, forceCloseMainWindow = false, updateAvailable = false, releaseNotes = undefined, sandbox = false
 
 /** Basic Electron app events: */
 
@@ -134,6 +134,7 @@ app.on('window-all-closed', () => {
     if (updateAvailable) {
         dialog.showMessageBox({
             message: 'Update will be installed after you click the "OK" button below.',
+            detail: releaseNotes || 'New Electron version and bug fixes.',
             buttons: ['OK'],
             noLink: true
         }).then(({ response }) => {
@@ -742,7 +743,10 @@ function createMainWindow(url) {
         })
     }
     autoUpdater.checkForUpdatesAndNotify()
-    .then((res) => updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion)
+    .then((res) => {
+        updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion
+        releaseNotes = res.updateInfo.releaseNotes
+    })
     .catch((error) => console.log(error))
     return mainWindow
 }
