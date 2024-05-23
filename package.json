@@ -1,7 +1,7 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.1.8",
+    "version": "1.1.9",
     "description": "A Facebook client for macOS, Windows and Linux",
     "author": "Yuh Apps <yuhapps@gmail.com>",
     "homepage": "https://yuhapps.dev",
@@ -110,7 +110,7 @@
         "valid-url-utf8": "^1.0.7"
     },
     "devDependencies": {
-        "electron": "^29.1.4",
+        "electron": "^30.0.7",
         "electron-builder": "^24.13.3",
         "utf-8-validate": "6"
     },
