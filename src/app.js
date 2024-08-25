@@ -1,4 +1,4 @@
-const { app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, webContents } = require('electron')
+const { app, BaseWindow, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, WebContentsView, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const { autoUpdater } = require('electron-updater')
 const fetch = require('electron-fetch').default
@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 8
-const BUILD_DATE = '2024.04.26'
+const BUILD_DATE = '2024.08.18'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -51,7 +51,7 @@ const SEARCH_ENGINES = {
 }
 
 
-let aboutWindow, downloadsWindow, mainWindow, prefsWindow
+let aboutWindow, downloadsWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
 let tempUrl, forceCloseMainWindow = false, updateAvailable = false, releaseNotes = undefined, sandbox = false
 
@@ -66,7 +66,7 @@ app.whenReady().then(() => {
     global.recentDownloads = [] 
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
     requestCameraAndMicrophonePermissions()
-    let mw = createMainWindow()
+    let mw = createBrowserWindow(FACEBOOK_URL)
     if (process.platform === 'darwin') {
         createAppMenu()
         createDockActions()
@@ -84,14 +84,12 @@ app.whenReady().then(() => {
 
 app.on('activate', (event, hasVisibleWindows) => {
     let badgeCount = app.getBadgeCount()
-    if (BrowserWindow.getAllWindows().length === 0 || mainWindow === null || mainWindow.isDestroyed()) {
-        createMainWindow()
-    } else if (hasVisibleWindows && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.showInactive()
-        let focusedWindow = BrowserWindow.getFocusedWindow()
+    let t = titleBarAppearance === '0'
+    if (hasVisibleWindows) {
+        let focusedWindow = t ? BrowserWindow.getFocusedWindow() : BaseWindow.getFocusedWindow()
         if (focusedWindow) focusedWindow.show()
-    } else if (mainWindow) {
-        mainWindow.show()
+    } else {
+        createBrowserWindow(FACEBOOK_URL)
     }
     app.show()
     setTimeout(() => app.setBadgeCount(badgeCount), 500)
@@ -156,11 +154,7 @@ app.on('window-all-closed', () => {
 })
 
 powerMonitor.on('on-battery', () => {
-    if (process.platform !== 'darwin') return
-    let acb = settings.get('acb') || '0'
-    if (acb === '1' && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-        mainWindow.close()
-    }
+
 })
 
 powerMonitor.on('on-ac', () => {
@@ -168,11 +162,7 @@ powerMonitor.on('on-ac', () => {
 })
 
 powerMonitor.on('suspend', () => {
-    if (process.platform !== 'darwin') return
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-        forceCloseMainWindow = true
-        mainWindow.close()
-    }
+    
 })
 
 powerMonitor.on('resume', (event) => {
@@ -185,19 +175,15 @@ ipcMain.on('app-context-menu', () => {
 	menu.append(new MenuItem({
 		label: 'Facebook Home',
 		click: (menuItem, browserWindow, event) => {
-			browserWindow.getBrowserViews()[1].webContents.loadURL(FACEBOOK_URL)
+			browserWindow.getWebContentsViews()[1].webContents.loadURL(FACEBOOK_URL)
 		}
 	}))
 	menu.append(new MenuItem({
 		label: 'New Blank Window',
 		click: (menuItem, browserWindow, event) => {
 			let window = createBrowserWindow('src/blank.html', { blank: true })
-			if (mainWindow.isDestroyed()) {
-				window.show()
-			} else {
-				window.show()
-				window.focus()
-			}
+            window.show()
+            window.focus()
 		},
 	}))
 	menu.append(new MenuItem({ type: 'separator' }))
@@ -520,7 +506,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     } else {
         nativeTheme.themeSource = 'dark'
     }
-    let window = new BrowserWindow({
+    let window = new BaseWindow({
         x: x,
         y: y,
         height: height,
@@ -548,18 +534,17 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         window.show()
     }
     // Title
-    let titleView = new BrowserView({
+    let titleView = new WebContentsView({
         webPreferences: {
             nodeIntegration: true,
             enableRemoteModule: true,
             contextIsolation: false,
         }
     })
-    titleView.setAutoResize({ x: true, y: true, horizontal: true, vertical: false })
-    window.addBrowserView(titleView)
+    window.contentView.addChildView(titleView)
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width - (max === '1' ? rightMargin : 0), height: titleBarHeight })
     // Main content
-    let mainView = new BrowserView({
+    let mainView = new WebContentsView({
         webPreferences: {
             sandbox: sandbox,
             scrollBounce: true, 
@@ -569,9 +554,8 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
             // preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
         }
     })
-    mainView.setAutoResize({ x: false, y: false, width: true, height: true })
     mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
-    window.addBrowserView(mainView)
+    window.contentView.addChildView(mainView)
     mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
     // Load URL or File
     electronRemote.enable(titleView.webContents)
@@ -658,19 +642,20 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         }
     })
     window.on('close', (event) => {
+        titleView.webContents.destroy()
+        mainView.webContents.destroy()
+        titleView = null
+        mainView = null
+        return
         let acb = settings.get('acb') || '0'
-        if (window !== mainWindow || process.platform !== 'darwin') {
+        if (process.platform !== 'darwin') {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
-            window.removeBrowserView(titleView)
-            window.removeBrowserView(mainView)
             titleView = null
             mainView = null
         } else if (acb === '2' || (acb === '1' && powerMonitor.onBatteryPower)) {
             titleView.webContents.destroy()
             mainView.webContents.destroy()
-            window.removeBrowserView(titleView)
-            window.removeBrowserView(mainView)
             titleView = null
             mainView = null
         }
@@ -732,7 +717,7 @@ function createMainWindow(url) {
             app.setBadgeCount(badgeCount)
         })
     } else {
-        mainWindow.getBrowserViews()[1].webContents.on('page-title-updated', (event, title, explicitSet) => {
+        mainWindow.contentView.children[1].webContents.on('page-title-updated', (event, title, explicitSet) => {
             let badgeCount = 0
             if (title.startsWith('(')) {
                 try {
@@ -745,7 +730,7 @@ function createMainWindow(url) {
     autoUpdater.checkForUpdatesAndNotify()
     .then((res) => {
         updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion
-        releaseNotes = res.updateInfo.releaseNotes
+        releaseNotes = res ? res.updateInfo.releaseNotes : ''
     })
     .catch((error) => console.log(error))
     return mainWindow
@@ -755,7 +740,7 @@ function createAboutWindow() {
     if (aboutWindow) {
         aboutWindow.show()
     } else {
-        let s = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getBounds() : screen.getPrimaryDisplay().workAreaSize
+        let s = screen.getPrimaryDisplay().workAreaSize
         let x = Math.round(s.width / 2 - 360)
         let y = 120
         aboutWindow = new BrowserWindow({
@@ -784,8 +769,9 @@ function createAboutWindow() {
         aboutWindow.on('close', () => aboutWindow = null)
         aboutWindow.webContents.on('did-finish-load', (e) => {
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
-            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
-                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+            let focusedWindow = titleBarAppearance === '0' ? BrowserWindow.getFocusedWindow() : BaseWindow.getFocusedWindow().contentView.children[1]
+            let webContents = focusedWindow ? focusedWindow.webContents : { isLoading() { return false } }
+            if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
@@ -817,7 +803,7 @@ function createPrefsWindow() {
     if (prefsWindow) {
         prefsWindow.show()
     } else {
-        let s = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getBounds() : screen.getPrimaryDisplay().workAreaSize
+        let s = screen.getPrimaryDisplay().workAreaSize
         let x = Math.round(s.width / 2 - 400)
         let y = 120
         prefsWindow = new BrowserWindow({
@@ -868,8 +854,9 @@ function createPrefsWindow() {
             let montereyOrLower = process.platform === 'darwin' && Number(macRelease.substring(0, macRelease.indexOf('.'))) <= 21
             let title = montereyOrLower ? 'Preferences' : 'Settings'
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
-            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
-                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+            let focusedWindow = titleBarAppearance === '0' ? BrowserWindow.getFocusedWindow() : BaseWindow.getFocusedWindow().contentView.children[1]
+            let webContents = focusedWindow ? focusedWindow.webContents : { isLoading() { return false } }
+            if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
@@ -903,7 +890,7 @@ function createDownloadsWindow() {
     if (downloadsWindow) {
         downloadsWindow.show()
     } else {
-        let s = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getBounds() : screen.getPrimaryDisplay().workAreaSize
+        let s = screen.getPrimaryDisplay().workAreaSize
         let x = s.width / 2 - 400
         let y = 120
         downloadsWindow = new BrowserWindow({
@@ -932,8 +919,9 @@ function createDownloadsWindow() {
         })
         downloadsWindow.webContents.on('did-finish-load', (e) => {
             let version = app.getVersion() + ' (' + BUILD_DATE + ')'
-            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
-                let webContents = titleBarAppearance === '0' ? mainWindow.webContents : mainWindow.getBrowserViews()[1].webContents
+            let focusedWindow = titleBarAppearance === '0' ? BrowserWindow.getFocusedWindow() : BaseWindow.getFocusedWindow().contentView.children[1]
+            let webContents = focusedWindow ? focusedWindow.webContents : { isLoading() { return false } }
+            if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
                     .then((res) => {
@@ -1030,7 +1018,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.goBack()
                     } else if (browserWindow) {
-                        browserWindow.getBrowserViews()[1].webContents.goBack()
+                        browserWindow.getWebContentsViews()[1].webContents.goBack()
                     }
                 }
             }),
@@ -1044,7 +1032,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.goForward()
                     } else if (browserWindow) {
-                        browserWindow.getBrowserViews()[1].webContents.goForward()
+                        browserWindow.getWebContentsViews()[1].webContents.goForward()
                     }
                 }
             }),
@@ -1057,7 +1045,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.reload()
                     } else if (browserWindow) {
-                        browserWindow.getBrowserViews()[1].webContents.reload()
+                        browserWindow.getWebContentsViews()[1].webContents.reload()
                     }
                 }
             }),
@@ -1070,7 +1058,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         clipboard.writeText(browserWindow.webContents.getURL())
                     } else if (browserWindow) {
-                        clipboard.writeText(browserWindow.getBrowserViews()[1].webContents.getURL())
+                        clipboard.writeText(browserWindow.getWebContentsViews()[1].webContents.getURL())
                     }
                 }
             }),
@@ -1083,8 +1071,8 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
                     } else {
-                        browserWindow.getBrowserViews()[1].webContents
-                            .setAudioMuted(!browserWindow.getBrowserViews()[1].webContents.isAudioMuted())
+                        browserWindow.getWebContentsViews()[1].webContents
+                            .setAudioMuted(!browserWindow.getWebContentsViews()[1].webContents.isAudioMuted())
                     }
                 }
             }),
@@ -1135,7 +1123,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.loadURL(FACEBOOK_URL)
                     } else if (browserWindow) {
-                        browserWindow.getBrowserViews()[1].webContents.loadURL(FACEBOOK_URL)
+                        browserWindow.getWebContentsViews()[1].webContents.loadURL(FACEBOOK_URL)
                     }
                 }
             }),
@@ -1145,13 +1133,11 @@ function createAppMenu() {
                 visible: titleBarAppearance === '0',
                 enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(FACEBOOK_URL)
-                    } else if (browserWindow) {
+                    if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        mainWindow = createBrowserWindow(FACEBOOK_URL, { bounds })
+                        createBrowserWindow(FACEBOOK_URL, { bounds })
                     }
                 },
             }),
@@ -1160,11 +1146,7 @@ function createAppMenu() {
                 visible: titleBarAppearance !== '0',
                 enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(FACEBOOK_URL)
-                    } else {
-                        createBrowserWindow(FACEBOOK_URL)
-                    }
+                    createBrowserWindow(FACEBOOK_URL)
                 },
             }),
             new MenuItem({
@@ -1173,13 +1155,11 @@ function createAppMenu() {
                 visible: titleBarAppearance === '0',
                 enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(MESSENGER_URL)
-                    } else if (browserWindow) {
+                    if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        mainWindow = createBrowserWindow(MESSENGER_URL, { bounds })
+                        createBrowserWindow(MESSENGER_URL, { bounds })
                     }
                 },
             }),
@@ -1188,11 +1168,7 @@ function createAppMenu() {
                 visible: titleBarAppearance !== '0',
                 enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(MESSENGER_URL)
-                    } else {
-                        createBrowserWindow(MESSENGER_URL)
-                    }
+                    createBrowserWindow(MESSENGER_URL)
                 },
             }),
             new MenuItem({
@@ -1201,13 +1177,11 @@ function createAppMenu() {
                 visible: titleBarAppearance === '0',
                 enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(INSTAGRAM_URL)
-                    } else if (browserWindow) {
+                    if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        mainWindow = createBrowserWindow(INSTAGRAM_URL, { bounds })
+                        createBrowserWindow(INSTAGRAM_URL, { bounds })
                     }
                 },
             }),
@@ -1216,11 +1190,7 @@ function createAppMenu() {
                 visible: titleBarAppearance !== '0',
                 enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(INSTAGRAM_URL)
-                    } else {
-                        createBrowserWindow(INSTAGRAM_URL)
-                    }
+                    createBrowserWindow(INSTAGRAM_URL)
                 },
             }),
             new MenuItem({
@@ -1229,13 +1199,11 @@ function createAppMenu() {
                 visible: titleBarAppearance === '0',
                 enabled: titleBarAppearance === '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(THREADS_URL)
-                    } else if (browserWindow) {
+                    if (browserWindow) {
                         browserWindow.addTabbedWindow(createBrowserWindow(THREADS_URL))
                     } else {
                         let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        mainWindow = createBrowserWindow(THREADS_URL, { bounds })
+                        createBrowserWindow(THREADS_URL, { bounds })
                     }
                 },
             }),
@@ -1244,28 +1212,7 @@ function createAppMenu() {
                 visible: titleBarAppearance !== '0',
                 enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
-                    if (mainWindow.isDestroyed()) {
-                        createMainWindow(THREADS_URL)
-                    } else {
-                        createBrowserWindow(THREADS_URL)
-                    }
-                },
-            }),
-            new MenuItem({
-                label: 'New Blank Tab',
-                accelerator: 'Cmd+T',
-                enabled: titleBarAppearance === '0',
-                visible: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    let window = createBrowserWindow('src/blank.html', { blank: true, show: true })
-                    if (mainWindow.isDestroyed()) {
-                        window.show()
-                    } else {
-                        BrowserWindow.getAllWindows()[1].addTabbedWindow(window)
-                        window.show()
-                        window.focus()
-                        createTouchBarForWindow(window)
-                    }
+                    createBrowserWindow(THREADS_URL)
                 },
             }),
             new MenuItem({
@@ -1308,7 +1255,7 @@ function createAppMenu() {
                 click: (menuItem, browserWindow, event) => {
                     let window = BrowserWindow.getFocusedWindow()
                     if (!window) return
-                    let browserViews = window.getBrowserViews()
+                    let browserViews = window.getWebContentsViews()
                     let webContents = browserViews !== null && browserViews.length > 1 ? browserViews[1].webContents : window.webContents
                     if (webContents.isDevToolsOpened()) webContents.closeDevTools() 
                     else                                webContents.openDevTools()
@@ -1644,12 +1591,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             label: 'New Blank Window',
             click: (menuItem, browserWindow, event) => {
                 let window = createBrowserWindow('src/blank.html', { blank: true })
-                if (mainWindow.isDestroyed()) {
-                    window.show()
-                } else {
-                    window.show()
-                    window.focus()
-                }
+                window.show()
             },
         }))
         menu.append(new MenuItem({ type: 'separator' }))
@@ -1730,8 +1672,6 @@ function createDockActions() {
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
-                } else if (mainWindow.isDestroyed()) {
-                    mainWindow = createBrowserWindow(FACEBOOK_URL)
                 } else {
                     createBrowserWindow(FACEBOOK_URL)
                 }
@@ -1742,8 +1682,6 @@ function createDockActions() {
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
-                } else if (mainWindow.isDestroyed()) {
-                    mainWindow = createBrowserWindow(MESSENGER_URL)
                 } else {
                     createBrowserWindow(MESSENGER_URL)
                 }
@@ -1754,8 +1692,6 @@ function createDockActions() {
             click: (menuItem, browserWindow, event) => {
                 if (browserWindow && useTab) {
                     browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-                } else if (mainWindow.isDestroyed()) {
-                    mainWindow = createBrowserWindow(INSTAGRAM_URL)
                 } else {
                     createBrowserWindow(INSTAGRAM_URL)
                 }
@@ -1769,7 +1705,7 @@ function createDockActions() {
  * Initialize TouchBar (MBP only)
  */
 function createTouchBarForWindow(window) {
-    if (process.platform !== 'darwin') return
+    return
     let resolvePath = (name) => path.join(__dirname, `/assets/${name}_mono.png`)
     let resizeOptions = { width: 24, height: 24 }
     let useTab = titleBarAppearance === '0'
