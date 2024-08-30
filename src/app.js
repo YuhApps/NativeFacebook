@@ -395,6 +395,12 @@ function createBrowserWindow(url, options) {
     window.on('exit-full-screen', () => {
         window.setMinimumSize(800, 600)
     })
+    window.on('resize', () => {
+        settings.set('mainWindow', window.getBounds())
+    })
+    window.on('move', () => {
+        settings.set('mainWindow', window.getBounds())
+    })
     return window
 }
 
