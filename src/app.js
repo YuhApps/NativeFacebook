@@ -175,7 +175,7 @@ ipcMain.on('app-context-menu', () => {
 	menu.append(new MenuItem({
 		label: 'Facebook Home',
 		click: (menuItem, browserWindow, event) => {
-			browserWindow.getWebContentsViews()[1].webContents.loadURL(FACEBOOK_URL)
+			browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
 		}
 	}))
 	menu.append(new MenuItem({
@@ -1024,7 +1024,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.goBack()
                     } else if (browserWindow) {
-                        browserWindow.getWebContentsViews()[1].webContents.goBack()
+                        browserWindow.contentView.children[1].webContents.goBack()
                     }
                 }
             }),
@@ -1038,7 +1038,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.goForward()
                     } else if (browserWindow) {
-                        browserWindow.getWebContentsViews()[1].webContents.goForward()
+                        browserWindow.contentView.children[1].webContents.goForward()
                     }
                 }
             }),
@@ -1051,7 +1051,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.reload()
                     } else if (browserWindow) {
-                        browserWindow.getWebContentsViews()[1].webContents.reload()
+                        browserWindow.contentView.children[1].webContents.reload()
                     }
                 }
             }),
@@ -1064,7 +1064,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         clipboard.writeText(browserWindow.webContents.getURL())
                     } else if (browserWindow) {
-                        clipboard.writeText(browserWindow.getWebContentsViews()[1].webContents.getURL())
+                        clipboard.writeText(browserWindow.contentView.children[1].webContents.getURL())
                     }
                 }
             }),
@@ -1077,8 +1077,8 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
                     } else {
-                        browserWindow.getWebContentsViews()[1].webContents
-                            .setAudioMuted(!browserWindow.getWebContentsViews()[1].webContents.isAudioMuted())
+                        browserWindow.contentView.children[1].webContents
+                            .setAudioMuted(!browserWindow.contentView.children[1].webContents.isAudioMuted())
                     }
                 }
             }),
@@ -1129,7 +1129,7 @@ function createAppMenu() {
                     if (titleBarAppearance === '0') {
                         browserWindow.webContents.loadURL(FACEBOOK_URL)
                     } else if (browserWindow) {
-                        browserWindow.getWebContentsViews()[1].webContents.loadURL(FACEBOOK_URL)
+                        browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
                     }
                 }
             }),
