@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 8
-const BUILD_DATE = '2024.08.18'
+const BUILD_DATE = '2024.10.28'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -54,6 +54,7 @@ const SEARCH_ENGINES = {
 let aboutWindow, downloadsWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
 let tempUrl, forceCloseMainWindow = false, updateAvailable = false, releaseNotes = undefined, sandbox = false
+let lastUpdate = 0
 
 /** Basic Electron app events: */
 
@@ -93,6 +94,8 @@ app.on('activate', (event, hasVisibleWindows) => {
     }
     app.show()
     setTimeout(() => app.setBadgeCount(badgeCount), 500)
+
+    checkForUpdate()
 })
 
 app.on('open-url', (event, url) => {
@@ -213,8 +216,12 @@ ipcMain.on('app-context-menu', () => {
 	}))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
-        label: updateAvailable ? 'New update is available' : 'About Native Facebook',
-        click: updateAvailable ? openDownloadPageOnGitHub : createAboutWindow
+        label: 'About Native Facebook',
+        click: createAboutWindow
+    }))
+    menu.append(new MenuItem({
+        label: 'Check for update',
+        click: () => autoUpdater.checkForUpdatesAndNotify(),
     }))
     menu.append(new MenuItem({
         label: 'Developed by YUH APPS',
@@ -634,6 +641,10 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
         mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
+    window.on('resize', (e) => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+    })
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
@@ -653,18 +664,6 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         titleView = null
         mainView = null
         return
-        let acb = settings.get('acb') || '0'
-        if (process.platform !== 'darwin') {
-            titleView.webContents.destroy()
-            mainView.webContents.destroy()
-            titleView = null
-            mainView = null
-        } else if (acb === '2' || (acb === '1' && powerMonitor.onBatteryPower)) {
-            titleView.webContents.destroy()
-            mainView.webContents.destroy()
-            titleView = null
-            mainView = null
-        }
     })
     return window
 }
@@ -1654,6 +1653,10 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             label: 'About Native Facebook',
             click: createAboutWindow,
         }))
+        menu.append(new MenuItem({
+            label: 'Check for update',
+            click: () => autoUpdater.checkForUpdatesAndNotify(),
+        }))
     }
 
     if (updateAvailable) {
@@ -1776,24 +1779,9 @@ function createTouchBarForWindow(window) {
 }
 
 function checkForUpdate() {
-    const cfuURL = 'https://yuhapps.dev/api/nfb/cfu'
-    const now = Date.now()
-    const lastUpdate = settings.get('cfu_last_fetch') || 0
-    if (now - lastUpdate > 86400000 * 7) {
-        fetch(cfuURL).then((res) => res.json())
-        .then(({ vc, vn }) => {
-            settings.set('cfu_last_fetch', now)
-            console.log(vc, vn)
-            if (vc > VERSION_CODE) {
-                let notification = new Notification({
-                    title: 'Update available',
-                    body: 'There is a new update for Native Facebook. Click here to download it.',
-                    silent: false
-                })
-                notification.on('click', (e) => openDownloadPageOnGitHub())
-                notification.show()
-                updateAvailable = true
-            }
-        }).catch((error) => console.log(error))
+    let now = Date.now()
+    if (now - lastUpdate > 86400000) {
+        autoUpdater.checkForUpdatesAndNotify()
+        lastUpdate = now
     }
 }

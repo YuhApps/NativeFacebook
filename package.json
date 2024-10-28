@@ -1,7 +1,7 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.1.12",
+    "version": "1.1.13",
     "description": "A Facebook client for macOS, Windows and Linux",
     "author": "Yuh Apps <yuhapps@gmail.com>",
     "homepage": "https://yuhapps.dev",
@@ -106,12 +106,12 @@
         "@electron/get": "^3.1.0",
         "@electron/remote": "^2.1.2",
         "electron-fetch": "^1.9.1",
-        "electron-updater": "^6.3.4",
-        "valid-url-utf8": "^1.0.7"
+        "electron-updater": "^6.3.9",
+        "valid-url-utf8": "^1.0.4"
     },
     "devDependencies": {
-        "electron": "^32.1.2",
-        "electron-builder": "^25.0.5",
+        "electron": "^33.0.2",
+        "electron-builder": "^25.1.8",
         "utf-8-validate": "6"
     },
     "postinstall": "electron-builder install-app-deps",
