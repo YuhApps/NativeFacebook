@@ -9,8 +9,8 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 8
-const BUILD_DATE = '2024.10.28'
+const VERSION_CODE = 9
+const BUILD_DATE = '2025.01.17'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -64,8 +64,8 @@ app.whenReady().then(() => {
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
     sandbox = settings.get('sbox') === '1'
-    global.recentDownloads = [] 
-    global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : [] 
+    global.recentDownloads = []
+    global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : []
     requestCameraAndMicrophonePermissions()
     let mw = createBrowserWindow(FACEBOOK_URL)
     if (process.platform === 'darwin') {
@@ -105,7 +105,7 @@ app.on('open-url', (event, url) => {
     } else {
         tempUrl = url
     }
-    
+
 })
 
 app.on('new-window-for-tab', (event) => {
@@ -165,7 +165,7 @@ powerMonitor.on('on-ac', () => {
 })
 
 powerMonitor.on('suspend', () => {
-    
+
 })
 
 powerMonitor.on('resume', (event) => {
@@ -175,21 +175,21 @@ powerMonitor.on('resume', (event) => {
 // Handle app context menu invoke on Windows
 ipcMain.on('app-context-menu', () => {
     let menu = new Menu()
-	menu.append(new MenuItem({
-		label: 'Facebook Home',
-		click: (menuItem, browserWindow, event) => {
-			browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
-		}
-	}))
-	menu.append(new MenuItem({
-		label: 'New Blank Window',
-		click: (menuItem, browserWindow, event) => {
-			let window = createBrowserWindow('src/blank.html', { blank: true })
+    menu.append(new MenuItem({
+        label: 'Facebook Home',
+        click: (menuItem, browserWindow, event) => {
+            browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
+        }
+    }))
+    menu.append(new MenuItem({
+        label: 'New Blank Window',
+        click: (menuItem, browserWindow, event) => {
+            let window = createBrowserWindow('src/blank.html', { blank: true })
             window.show()
             window.focus()
-		},
-	}))
-	menu.append(new MenuItem({ type: 'separator' }))
+        },
+    }))
+    menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
         label: 'Settings',
         click: createPrefsWindow,
@@ -198,22 +198,22 @@ ipcMain.on('app-context-menu', () => {
         label: 'Downloads',
         click: createDownloadsWindow,
     }))
-	menu.append(new MenuItem({ type: 'separator' }))
-	menu.append(new MenuItem({
-		label: 'Toggle Full screen mode',
-		click: (menuItem, browserWindow, event) => {
-			let isFullScreen = browserWindow.isFullScreen()
-			browserWindow.setFullScreen(!isFullScreen)
-		}
-	}))
-	menu.append(new MenuItem({
-		label: 'Toggle Picture in Picture',
-		id: 'pip',
-		visible: (settings.get('pip') || '0') === '1',
-		click: (menuItem, browserWindow, event) => {
-			browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
-		}
-	}))
+    menu.append(new MenuItem({ type: 'separator' }))
+    menu.append(new MenuItem({
+        label: 'Toggle Full screen mode',
+        click: (menuItem, browserWindow, event) => {
+            let isFullScreen = browserWindow.isFullScreen()
+            browserWindow.setFullScreen(!isFullScreen)
+        }
+    }))
+    menu.append(new MenuItem({
+        label: 'Toggle Picture in Picture',
+        id: 'pip',
+        visible: (settings.get('pip') || '0') === '1',
+        click: (menuItem, browserWindow, event) => {
+            browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+        }
+    }))
     menu.append(new MenuItem({ type: 'separator' }))
     menu.append(new MenuItem({
         label: 'About Native Facebook',
@@ -287,37 +287,37 @@ function requestCameraAndMicrophonePermissions() {
     if (cam_mic === '0') return
     let not_granted = ['denied', 'restricted', 'unknown']
     Promise.all([systemPreferences.getMediaAccessStatus('camera'), systemPreferences.getMediaAccessStatus('microphone')])
-    .then(([cam, mic]) => {
-        if (not_granted.indexOf(cam) > -1 || not_granted.indexOf(mic) > -1) {
-            dialog.showMessageBox({
-                defaultId: 1,
-                message: 'Camera and Microphone permissions',
-                detail: 'In order to allow livestreaming, Facebook (Unofficial) requires access to Camera and Microphone. Please open System Preferences, ' +
-                    'click on Security & Privacy, select the Privacy tab, and give Facebook (Unofficial) access to Camera and Microphone. If you do not ' +
-                    'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
-                buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
-            }).then(({ response }) => {
-                if (response === 2) {
-                    settings.set('cam_mic', '0')
-                } else if (response === 1) {
-                    shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?privacy`)
-                    .then(() => {
-                        return Promise.all(
-                            systemPreferences.askForMediaAccess('camera'),
-                            systemPreferences.askForMediaAccess('microphone')
-                        )
-                    })
-                }
-            })
-        }
-        if (cam === 'not-determined') {
-            systemPreferences.askForMediaAccess('camera')
-        }
-        if (mic === 'not-determined') {
-            systemPreferences.askForMediaAccess('microphone')
-        }
-    })
-    
+        .then(([cam, mic]) => {
+            if (not_granted.indexOf(cam) > -1 || not_granted.indexOf(mic) > -1) {
+                dialog.showMessageBox({
+                    defaultId: 1,
+                    message: 'Camera and Microphone permissions',
+                    detail: 'In order to allow livestreaming, Facebook (Unofficial) requires access to Camera and Microphone. Please open System Preferences, ' +
+                        'click on Security & Privacy, select the Privacy tab, and give Facebook (Unofficial) access to Camera and Microphone. If you do not ' +
+                        'wish to give permissions, you can turn off this check in Settings/Preferences screen.',
+                    buttons: ['Cancel', 'Open System Preferences', 'Do not ask again']
+                }).then(({ response }) => {
+                    if (response === 2) {
+                        settings.set('cam_mic', '0')
+                    } else if (response === 1) {
+                        shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?privacy`)
+                            .then(() => {
+                                return Promise.all(
+                                    systemPreferences.askForMediaAccess('camera'),
+                                    systemPreferences.askForMediaAccess('microphone')
+                                )
+                            })
+                    }
+                })
+            }
+            if (cam === 'not-determined') {
+                systemPreferences.askForMediaAccess('camera')
+            }
+            if (mic === 'not-determined') {
+                systemPreferences.askForMediaAccess('microphone')
+            }
+        })
+
 }
 
 function isDefaultHttpProtocolClient() {
@@ -394,8 +394,8 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
  */
 function createBrowserWindow(url, options) {
     let window = titleBarAppearance === '0' ? createBrowserWindowWithSystemTitleBar(url, options)
-                                            : createBrowserWindowWithCustomTitleBar(url, options)
-    
+        : createBrowserWindowWithCustomTitleBar(url, options)
+
     window.on('enter-full-screen', () => {
         window.setMinimumSize(600, 600)
     })
@@ -560,7 +560,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     let mainView = new WebContentsView({
         webPreferences: {
             sandbox: sandbox,
-            scrollBounce: true, 
+            scrollBounce: true,
             spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
             contextIsolation: true,
@@ -589,7 +589,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     }
     createTouchBarForWindow(window)
     mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
-        
+
     })
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
@@ -693,7 +693,7 @@ function createMainWindow(url) {
         if (title.startsWith('(')) {
             try {
                 app.setBadgeCount(parseInt(title.substring(1, title.indexOf(')'))))
-            } catch (e) {}
+            } catch (e) { }
         }
     })
     mainWindow.on('resize', () => {
@@ -717,7 +717,7 @@ function createMainWindow(url) {
             if (title.startsWith('(')) {
                 try {
                     badgeCount = parseInt(title.substring(1, title.indexOf(')')))
-                } catch (e) {}
+                } catch (e) { }
             }
             app.setBadgeCount(badgeCount)
         })
@@ -727,17 +727,17 @@ function createMainWindow(url) {
             if (title.startsWith('(')) {
                 try {
                     badgeCount = parseInt(title.substring(1, title.indexOf(')')))
-                } catch (e) {}
+                } catch (e) { }
             }
             app.setBadgeCount(badgeCount)
         })
     }
     autoUpdater.checkForUpdatesAndNotify()
-    .then((res) => {
-        updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion
-        releaseNotes = res ? res.updateInfo.releaseNotes : ''
-    })
-    .catch((error) => console.log(error))
+        .then((res) => {
+            updateAvailable = res && res.updateInfo.version > autoUpdater.currentVersion
+            releaseNotes = res ? res.updateInfo.releaseNotes : ''
+        })
+        .catch((error) => console.log(error))
     return mainWindow
 }
 
@@ -779,14 +779,14 @@ function createAboutWindow() {
             if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
-                    .then((res) => {
-                        aboutWindow.webContents.send('dark', res, version)
-                        settings.set('prefs-dark', res)
-                    })
-                    .catch((e) => {
-                        let dark = settings.get('prefs-dark') || false
-                        aboutWindow.webContents.send('dark', dark, version)
-                    })
+                        .then((res) => {
+                            aboutWindow.webContents.send('dark', res, version)
+                            settings.set('prefs-dark', res)
+                        })
+                        .catch((e) => {
+                            let dark = settings.get('prefs-dark') || false
+                            aboutWindow.webContents.send('dark', dark, version)
+                        })
                 } else {
                     let dark = settings.get('prefs-dark') || false
                     aboutWindow.webContents.send('dark', dark, version)
@@ -864,16 +864,16 @@ function createPrefsWindow() {
             if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
-                    .then((res) => {
-                        prefsWindow.webContents.send('title', title)
-                        prefsWindow.webContents.send('dark', res, version, updateAvailable)
-                        settings.set('prefs-dark', res)
-                    })
-                    .catch((e) => {
-                        prefsWindow.webContents.send('title', title)
-                        let dark = settings.get('prefs-dark') || false
-                        prefsWindow.webContents.send('dark', dark, version, updateAvailable)
-                    })
+                        .then((res) => {
+                            prefsWindow.webContents.send('title', title)
+                            prefsWindow.webContents.send('dark', res, version, updateAvailable)
+                            settings.set('prefs-dark', res)
+                        })
+                        .catch((e) => {
+                            prefsWindow.webContents.send('title', title)
+                            let dark = settings.get('prefs-dark') || false
+                            prefsWindow.webContents.send('dark', dark, version, updateAvailable)
+                        })
                 } else {
                     prefsWindow.webContents.send('title', title)
                     let dark = settings.get('prefs-dark') || false
@@ -929,14 +929,14 @@ function createDownloadsWindow() {
             if (webContents.isLoading()) {
                 if (webContents.getURL().startsWith(FACEBOOK_URL)) {
                     webContents.executeJavaScript('document.documentElement.classList.contains("__fb-dark-mode")')
-                    .then((res) => {
-                        downloadsWindow.webContents.send('dark', res, version)
-                        settings.set('prefs-dark', res)
-                    })
-                    .catch((e) => {
-                        let dark = settings.get('prefs-dark') || false
-                        downloadsWindow.webContents.send('dark', dark, version)
-                    })
+                        .then((res) => {
+                            downloadsWindow.webContents.send('dark', res, version)
+                            settings.set('prefs-dark', res)
+                        })
+                        .catch((e) => {
+                            let dark = settings.get('prefs-dark') || false
+                            downloadsWindow.webContents.send('dark', dark, version)
+                        })
                 } else {
                     let dark = settings.get('prefs-dark') || false
                     downloadsWindow.webContents.send('dark', dark, version)
@@ -1090,9 +1090,9 @@ function createAppMenu() {
                     let browserWindows = BrowserWindow.getAllWindows()
                     if (!browserWindow) return
                     browserWindow.webContents.executeJavaScript('window.location.origin')
-                    .then((origin) => {
-                        browserWindows.forEach((window) =>
-                            window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
+                        .then((origin) => {
+                            browserWindows.forEach((window) =>
+                                window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
                         })
                 }
             }),
@@ -1253,7 +1253,7 @@ function createAppMenu() {
                     }
                 }
             }),
-            new MenuItem({ 
+            new MenuItem({
                 id: 'dev-tools',
                 label: 'Toggle Developer Tools',
                 visible: dev === '1',
@@ -1262,8 +1262,8 @@ function createAppMenu() {
                     if (!window) return
                     let browserViews = window.getWebContentsViews()
                     let webContents = browserViews !== null && browserViews.length > 1 ? browserViews[1].webContents : window.webContents
-                    if (webContents.isDevToolsOpened()) webContents.closeDevTools() 
-                    else                                webContents.openDevTools()
+                    if (webContents.isDevToolsOpened()) webContents.closeDevTools()
+                    else webContents.openDevTools()
                 }
             }),
             new MenuItem({ type: 'separator' }),
@@ -1276,7 +1276,7 @@ function createAppMenu() {
     })
 
     // Window menu
-    let window = new MenuItem({ role: 'windowMenu'})
+    let window = new MenuItem({ role: 'windowMenu' })
 
     // Help menu
     let help = new MenuItem({
@@ -1300,7 +1300,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     let dev = settings.get('dev') || '0'
     let pip = settings.get('pip') || '0'
     let search = settings.get('search') || '0'
-	let sctxm = titleBarAppearance === '0' ? '0' : settings.get('sctxm') || '0'
+    let sctxm = titleBarAppearance === '0' ? '0' : settings.get('sctxm') || '0'
     let focusedWindow = BrowserWindow.getFocusedWindow()
     if (linkURL) {
         menu.append(new MenuItem({
@@ -1326,13 +1326,13 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
                 if (browserWindow) {
                     browserWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim()))
                 } else {
-                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim())) 
+                    finalWindow.addTabbedWindow(createBrowserWindow(linkURL || selectionText.trim()))
                 }
             }
         }))
         menu.append(new MenuItem({
             label: 'Open Link in New Window',
-            visible: (process.platform !== 'darwin' || titleBarAppearance !== '0' )&& (linkURL || isLink(selectionText)),
+            visible: (process.platform !== 'darwin' || titleBarAppearance !== '0') && (linkURL || isLink(selectionText)),
             click: (menuItem, browserWindow, event) => {
                 createBrowserWindow(linkURL ? linkURL : selectionText.trim())
             }
@@ -1496,7 +1496,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             role: 'shareMenu',
             sharingItem: {
                 urls: [linkURL]
-            } 
+            }
         }))
         menu.append(new MenuItem({
             type: 'separator',

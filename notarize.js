@@ -6,7 +6,7 @@ exports.default = async function notarizing(context) {
     console.log("Skipping notarization")
     return
   }
-  console.log("Notarizing...")
+  console.log("Notarizing using notarize.js script...")
 
   const appBundleId = context.packager.appInfo.info._configuration.appId
   const appName = context.packager.appInfo.productFilename
