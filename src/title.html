@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -10,6 +11,7 @@
             padding: 0;
             user-select: none;
         }
+
         div#main {
             align-items: center;
             background: #ffffff;
@@ -22,53 +24,65 @@
             white-space: nowrap;
             -webkit-app-region: drag;
         }
+
         div#main.dark {
             background: #242526;
             color: #ffffff;
         }
+
         div#main.black {
             background: #000000;
             color: #ffffff;
         }
-        div#main.dark svg, div#main.black svg {
+
+        div#main.dark svg,
+        div#main.black svg {
             fill: #ffffff;
         }
+
         div#main span.title {
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
         div#main.mac {
             display: flex;
             font-weight: bold;
-            height: 28px;
+            height: 24px;
             line-height: 28px;
-            padding: 0 80px;
+            padding: 2px 80px;
             text-align: center;
         }
+
         div#main.mac img {
             display: none;
         }
+
         div#main.mac .window-button {
             display: none;
         }
+
         div#main.win {
             display: flex;
             flex-direction: row;
             height: 32px;
             text-align: left;
         }
+
         div#main.win img {
             cursor: pointer;
             margin: 0 12px;
             width: 20px;
             -webkit-app-region: no-drag;
         }
+
         div#main.win button {
             height: 32px;
             width: 48px;
         }
+
         #resize {
             background: transparent;
             height: 3px;
@@ -80,9 +94,11 @@
             z-index: 5;
             -webkit-app-region: no-drag;
         }
+
         .hidden {
             display: none;
         }
+
         .window-button {
             background: transparent;
             border: none;
@@ -91,47 +107,70 @@
             width: 48px;
             -webkit-app-region: no-drag;
         }
+
         .window-button svg path {
             fill: black;
         }
+
         .window-button.hover svg path {
             fill: black !important;
         }
-        .dark .window-button svg path, .black .window-button svg path {
+
+        .dark .window-button svg path,
+        .black .window-button svg path {
             fill: white;
         }
+
         .window-button.close.hover {
             background: #ff5e57;
         }
-        .window-button.maximize.hover, .window-button.unmaximize.hover {
+
+        .window-button.maximize.hover,
+        .window-button.unmaximize.hover {
             background: #28c840;
         }
+
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
+
         .window-button.new-tab.hover {
             background: #36c0ff;
         }
     </style>
 </head>
+
 <body>
     <div class="" id="main">
         <img alt="">
-        <span class="title">Facebook</span>
+        <span class="title"></span>
         <button class="window-button new-tab">
-            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><path d="M11,8.708l-1.375,0l0,-1.375l-0.917,0l0,1.375l-1.375,0l0,0.917l1.375,0l0,1.375l0.917,0l0,-1.375l1.375,0l0,-0.917Zm0,-8.708l0,6.417l-0.917,-0l0,-3.667l-9.166,0l-0,7.333l5.5,0l-0,0.917l-6.417,0l0,-11l11,0Z"/></svg>
+            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M11,8.708l-1.375,0l0,-1.375l-0.917,0l0,1.375l-1.375,0l0,0.917l1.375,0l0,1.375l0.917,0l0,-1.375l1.375,0l0,-0.917Zm0,-8.708l0,6.417l-0.917,-0l0,-3.667l-9.166,0l-0,7.333l5.5,0l-0,0.917l-6.417,0l0,-11l11,0Z" />
+            </svg>
         </button>
         <button class="window-button minimize"> <!-- min -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 4.399V5.5H0V4.399h11z' />
+            </svg>
         </button>
         <button class="window-button maximize"> <!-- max -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' />
+            </svg>
         </button>
         <button class="window-button unmaximize"> <!-- unmax -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' />
+            </svg>
         </button>
         <button class="window-button close"> <!-- close -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' />
+            </svg>
         </button>
     </div>
     <div id="resize"></div>
@@ -143,7 +182,6 @@
         let titleView = document.querySelector('div#main')
         let titleText = document.querySelector('div span')
         let max = settings.get('max') || '0'
-        let titleBarSettings = settings.get('title-bar') || '0'
         let windowButtons = document.querySelectorAll('.window-button')
         let newTabButton = windowButtons[0]
         let minButton = windowButtons[1]
@@ -152,11 +190,6 @@
         let closeButton = windowButtons[4]
         let currentWindow = remote.getCurrentWindow()
 
-        if (titleBarSettings === '2') titleView.classList.add('dark')
-        else if (titleBarSettings === '3') titleView.classList.add('black')
-        else if (titleBarSettings === '4') {
-            
-        }
         if (platform === 'win32') {
             titleView.classList.add('win')
             let img = document.querySelector('img')
@@ -212,7 +245,7 @@
             titleView.classList.add('mac')
             titleView.ondblclick = (e) => {
                 let doubleClickAction = remote.systemPreferences.getUserDefault('AppleActionOnDoubleClick', 'string')
-                if (doubleClickAction === 'None' ) {
+                if (doubleClickAction === 'None') {
                     return
                 } else if (doubleClickAction === 'Minimize') {
                     currentWindow.minimize()
@@ -225,6 +258,11 @@
         }
         ipcRenderer.on('update-title', (event, title, themeColor) => {
             titleText.textContent = title
+        })
+        ipcRenderer.on('update-title-color', (event, color, isDark) => {
+            console.log(color)
+            document.querySelector('#main').style.backgroundColor = color
+            titleText.style.color = isDark ? '#fff' : '#000'
         })
 
         function lumiananceFromRGB([r, g, b]) {
@@ -242,4 +280,5 @@
         }
     </script>
 </body>
+
 </html>

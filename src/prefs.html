@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
             --fb-nav-dark: #242526;
             --fb-color-dark: #d2e3fc;
         }
+
         body {
             background: var(--web-wash);
             font-family: sans-serif;
@@ -21,10 +23,12 @@
             padding: 0;
             user-select: none;
         }
+
         body.dark {
             background: var(--web-wash-dark);
             color-scheme: dark;
-        }        
+        }
+
         header {
             background: white;
             color: var(--fb-color);
@@ -37,14 +41,17 @@
             z-index: 20;
             -webkit-app-region: drag
         }
+
         .dark header {
             background: #242526;
             color: white;
-        }        
+        }
+
         header h3 {
             text-align: center;
             text-transform: uppercase;
         }
+
         .window-buttons-wrapper {
             display: flex;
             flex-direction: row;
@@ -54,18 +61,22 @@
             z-index: 25;
             -webkit-app-region: drag
         }
+
         .button-wrapper button {
             cursor: pointer;
             height: 32px;
             width: 48px;
             -webkit-app-region: no-drag;
-        }        
+        }
+
         .hidden {
             display: none;
         }
+
         .transparent {
             opacity: 0;
         }
+
         .pref-wrapper {
             background: var(--web-wash);
             bottom: 0;
@@ -75,7 +86,8 @@
             position: fixed;
             overflow-y: scroll;
             top: 60px;
-        }   
+        }
+
         /*     
         .pref-wrapper.mac {
             margin: auto;
@@ -89,7 +101,8 @@
         */
         .dark .pref-wrapper {
             background: var(--web-wash-dark);
-        }        
+        }
+
         .pref {
             background: white;
             border-radius: 4px;
@@ -97,47 +110,58 @@
             margin: 12px 48px;
             padding: 12px 24px;
         }
+
         .dark .pref {
             background: #242526;
             color: white;
-        }        
+        }
+
         .pref label {
             font-size: 16px;
             margin-bottom: 4px;
         }
+
         .pref input[type="radio"] {
             margin-bottom: 8px;
             margin-left: 12px;
             margin-right: 20px;
         }
+
         .pref-title {
             border-bottom: 1px solid var(--fb-color);
             color: var(--fb-color);
             font-size: 16px;
             font-weight: bold;
         }
+
         .dark .pref-title {
             border-bottom: 1px solid var(--fb-color-dark);
             color: var(--fb-color-dark);
         }
+
         .pref-subtitle {
             color: grey;
             font-size: 16px;
             font-style: italic;
         }
+
         .pref-button-wrapper {
             display: flex;
             flex-direction: row;
         }
+
         .pref-button-wrapper .pref-button {
             flex: 1;
         }
+
         .pref-button-wrapper .pref-button.flex-double {
             flex: 2;
         }
+
         .pref-button-wrapper .pref-button-spacer {
             width: 16px;
         }
+
         .pref-button {
             border: none;
             border-radius: 4px;
@@ -150,33 +174,41 @@
             text-transform: uppercase;
             transition-duration: 0.25s;
         }
+
         .pref-button.white {
             background: white;
             color: var(--fb-color);
         }
+
         .pref-button.white:active {
             background: #e8e8e8;
             color: var(--fb-color);
         }
+
         .pref-button.primary {
             background: var(--fb-color);
             color: white;
         }
+
         .dark .pref-button {
             background: var(--fb-color-dark);
             color: var(--web-wash-dark);
         }
+
         .pref-button.warning {
             background: var(--warning-color);
             color: white;
         }
+
         .pref-button.warning:active {
             background: var(--warning-color-pressed);
             color: white;
         }
+
         .dark input[type='radio']:checked {
             filter: hue-rotate(30deg) brightness(125%);
         }
+
         .window-button {
             background: transparent;
             border: none;
@@ -185,39 +217,51 @@
             width: 48px;
             -webkit-app-region: no-drag;
         }
+
         .window-button svg path {
             fill: black;
         }
+
         .window-button.hover svg path {
             fill: black !important;
         }
-        .dark .window-button svg path, .black .window-button svg path {
+
+        .dark .window-button svg path,
+        .black .window-button svg path {
             fill: white;
         }
+
         .window-button.close.hover {
             background: #ff5e57;
         }
-        .window-button.maximize.hover, .window-button.unmaximize.hover {
+
+        .window-button.maximize.hover,
+        .window-button.unmaximize.hover {
             background: #28c840;
         }
+
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
+
         #app-version {
             color: var(--fb-color);
             cursor: pointer;
             font-weight: bold;
             text-decoration: underline;
         }
+
         .dark #app-version {
             color: lightgrey;
         }
+
         .cfu {
             background: var(--warning-color);
             color: #ffffff;
             cursor: pointer;
             font-weight: bold;
         }
+
         .dark .cfu {
             background: var(--warning-color-pressed);
         }
@@ -231,22 +275,35 @@
         const platform = remote.process.platform
     </script>
 </head>
+
 <body class="transparent">
     <header>
         <h3>&nbsp;</h3>
     </header>
     <div class="window-buttons-wrapper hidden">
         <button class="window-button minimize"> <!-- min -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 4.399V5.5H0V4.399h11z' fill='#000' />
+            </svg>
         </button>
         <button class="window-button maximize hidden"> <!-- max -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000' />
+            </svg>
         </button>
         <button class="window-button unmaximize hidden"> <!-- unmax -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z'
+                    fill='#000' />
+            </svg>
         </button>
         <button class="window-button close"> <!-- close -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z'
+                    fill='#000' />
+            </svg>
         </button>
     </div>
     <div class="pref-wrapper">
@@ -255,7 +312,7 @@
             <p>There is a new version. Click here to download it.</p>
         </div>
 
-        <!-- TitleBar -->
+        <!-- TitleBar 
         <div class="pref mac win">
             <p class="pref-title">Title Bar appearance (Requires restart):</p>
             <input type="radio" id="title-bar-system" name="title-bar" value="0" checked>
@@ -266,22 +323,21 @@
             <label for="title-bar-dark">Dark</label><br>
             <input type="radio" id="title-bar-black" name="title-bar" value="3">
             <label for="title-bar-black">Black</label><br>
-        </div>
-		
-		<!-- Simplified context menu on Windows when TitleBar is not system -->
+        </div> -->
+
+        <!-- Simplified context menu on Windows when TitleBar is not system -->
         <div class="pref win">
             <p class="pref-title">Simplify context menu (requires Title Bar appearance set to non-system):</p>
             <input type="radio" id="simple-context-menu-off" name="sctxm" value="0" checked>
             <label for="title-bar-system">No</label><br>
             <input type="radio" id="simple-context-menu-on" name="sctxm" value="1">
             <label for="title-bar-light">Yes</label><br>
-			<p class="pref-subtitle">Click the Facebook icon at the top left corner to open app menu.</p>
+            <p class="pref-subtitle">Click the Facebook icon at the top left corner to open app menu.</p>
         </div>
 
-        <!-- On app close-->
+        <!-- On app close
         <div class="pref mac">
             <p class="pref-title">On app close:</p>
-            <!-- acb: App close behavior -->
             <input type="radio" id="acb-mw-on" name="acb" value="0">
             <label for="acb-mw-on">Always keep the Main window (for notification badge)</label><br>
             <input type="radio" id="acb-mw-ac" name="acb" value="1">
@@ -290,7 +346,7 @@
             <label for="acb-mw-off">Always close the Main window, but remain active (standard macOS)</label><br>
             <input type="radio" id="acb-quit" name="acb" value="3">
             <label for="acb-quit">Force quit (cold launch)</label><br>
-        </div>
+        </div> -->
 
         <!-- Check Camera and Microphone permissions -->
         <div class="pref mac">
@@ -345,6 +401,8 @@
             <label for="search-google">Google</label><br>
             <input type="radio" id="search-ddg" name="search" value="1">
             <label for="search-ddg">Duck Duck Go</label><br>
+            <input type="radio" id="search-bing" name="search" value="2">
+            <label for="search-bing">Bing</label><br>
         </div>
 
         <!-- Spell check -->
@@ -398,7 +456,7 @@
         const titleBarSettings = settings.get('title-bar') || '0'
 
         appVersion.textContent = remote.app.getVersion()
-        
+
         if (platform === 'win32') {
             document.querySelector('.window-buttons-wrapper').classList.remove('hidden')
             let windowButtons = document.querySelectorAll('.window-button')
@@ -440,7 +498,7 @@
             if (e.target.tagName !== 'button') {
                 body.classList.remove('transparent')
                 if ((settings.get('prefs-dark') || false) === true) {
-                    body.classList.add('dark')   
+                    body.classList.add('dark')
                 }
             }
         }

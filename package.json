@@ -1,7 +1,7 @@
 {
     "name": "facebook",
     "productName": "Facebook",
-    "version": "1.1.14",
+    "version": "1.1.20",
     "description": "A Facebook client for macOS, Windows and Linux",
     "author": "Yuh Apps <yuhapps@gmail.com>",
     "homepage": "https://yuhapps.dev",
@@ -10,6 +10,7 @@
         "start": "npx electron .",
         "pack-all": "npm run pack-mac && npm run pack-windows && npm run pack-linux && open dist/",
         "pack-mac": "npx electron-builder -m --x64 --arm64",
+        "pack-mac-x64": "npx electron-builder -m --x64 --dir && open dist/mac",
         "pack-linux": "npx electron-builder -l deb tar.xz --x64",
         "pack-windows": "npx electron-builder -w nsis zip --x64"
     },
@@ -110,7 +111,7 @@
         "valid-url-utf8": "^1.0.7"
     },
     "devDependencies": {
-        "electron": "^34.0.0",
+        "electron": "^34.3.3",
         "electron-builder": "^25.1.8",
         "utf-8-validate": "6"
     },

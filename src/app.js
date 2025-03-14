@@ -1,4 +1,4 @@
-const { app, BaseWindow, BrowserWindow, clipboard, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, shell, systemPreferences, TouchBar, WebContentsView, webContents } = require('electron')
+const { app, BaseWindow, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, session, shell, systemPreferences, TouchBar, WebContentsView, webContents } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const { autoUpdater } = require('electron-updater')
 const fetch = require('electron-fetch').default
@@ -10,7 +10,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 9
-const BUILD_DATE = '2025.01.17'
+const BUILD_DATE = '2025.03.14'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -48,7 +48,9 @@ const FACEBOOK_REFRESH = 'document.querySelector(".oajrlxb2.g5ia77u1.qu0x051f.es
 const SEARCH_ENGINES = {
     '0': 'https://www.google.com/?q=',
     '1': 'https://duckduckgo.com/?q=',
+    '2': 'https://www.bing.com/search?q=',
 }
+const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/' + process.versions.chrome + 'Safari/537.36'
 
 
 let aboutWindow, downloadsWindow, prefsWindow
@@ -61,12 +63,23 @@ let lastUpdate = 0
 electronRemote.initialize()
 
 app.whenReady().then(() => {
+    autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'org',
+        repo: 'repo',
+    })
+    autoUpdater.autoDownload = true
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
     sandbox = settings.get('sbox') === '1'
     global.recentDownloads = []
     global.previousDownloads = fs.existsSync(DOWNLOADS_JSON_PATH) ? JSON.parse(fs.readFileSync(DOWNLOADS_JSON_PATH, 'utf-8') || '[]') : []
     requestCameraAndMicrophonePermissions()
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+            callback({ video: sources[0], audio: 'loopback' })
+        })
+    }, { useSystemPicker: true })
     let mw = createBrowserWindow(FACEBOOK_URL)
     if (process.platform === 'darwin') {
         createAppMenu()
@@ -94,7 +107,6 @@ app.on('activate', (event, hasVisibleWindows) => {
     }
     app.show()
     setTimeout(() => app.setBadgeCount(badgeCount), 500)
-
     checkForUpdate()
 })
 
@@ -105,7 +117,6 @@ app.on('open-url', (event, url) => {
     } else {
         tempUrl = url
     }
-
 })
 
 app.on('new-window-for-tab', (event) => {
@@ -150,9 +161,6 @@ app.on('window-all-closed', () => {
         menu.getMenuItemById('app-menu-reload').enabled = false
         menu.getMenuItemById('app-menu-copy-url').enabled = false
         menu.getMenuItemById('app-menu-mute-tab').enabled = false
-        menu.getMenuItemById('app-menu-mute-website').enabled = false
-        menu.getMenuItemById('app-menu-mute-tabs').enabled = false
-        menu.getMenuItemById('app-menu-unmute-tabs').enabled = false
     }
 })
 
@@ -172,13 +180,46 @@ powerMonitor.on('resume', (event) => {
     // Do nothing
 })
 
+autoUpdater.on('error', (error) => {
+    dialog.showErrorBox('Error: ', error == null ? "unknown" : (error.stack || error).toString())
+})
+
+autoUpdater.on('update-available', () => {
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Found Updates',
+        message: 'Found updates, do you want update now?',
+        buttons: ['Yes', 'No']
+    }).then((buttonIndex) => {
+        if (buttonIndex.response === 0) {
+            autoUpdater.downloadUpdate()
+        }
+    })
+})
+
+autoUpdater.on('update-not-available', () => {
+    dialog.showMessageBox({
+        title: 'No Updates',
+        message: 'Current version is up-to-date.'
+    })
+})
+
+autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+        title: 'Install Updates',
+        message: 'Updates downloaded, application will be quit for update...'
+    }).then(() => {
+        setImmediate(() => autoUpdater.quitAndInstall())
+    })
+})
+
 // Handle app context menu invoke on Windows
 ipcMain.on('app-context-menu', () => {
     let menu = new Menu()
     menu.append(new MenuItem({
         label: 'Facebook Home',
         click: (menuItem, browserWindow, event) => {
-            browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
+            browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
         }
     }))
     menu.append(new MenuItem({
@@ -221,7 +262,7 @@ ipcMain.on('app-context-menu', () => {
     }))
     menu.append(new MenuItem({
         label: 'Check for update',
-        click: () => autoUpdater.checkForUpdatesAndNotify(),
+        click: () => autoUpdater.checkForUpdates(),
     }))
     menu.append(new MenuItem({
         label: 'Developed by YUH APPS',
@@ -317,7 +358,6 @@ function requestCameraAndMicrophonePermissions() {
                 systemPreferences.askForMediaAccess('microphone')
             }
         })
-
 }
 
 function isDefaultHttpProtocolClient() {
@@ -384,6 +424,20 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
     }
 }
 
+function brightnessByColor(color) {
+    var color = "" + color, isHEX = color.indexOf("#") == 0, isRGB = color.indexOf("rgb") == 0;
+    if (isHEX) {
+        const hasFullSpec = color.length == 7;
+        var m = color.substr(1).match(hasFullSpec ? /(\S{2})/g : /(\S{1})/g);
+        if (m) var r = parseInt(m[0] + (hasFullSpec ? '' : m[0]), 16), g = parseInt(m[1] + (hasFullSpec ? '' : m[1]), 16), b = parseInt(m[2] + (hasFullSpec ? '' : m[2]), 16);
+    }
+    if (isRGB) {
+        var m = color.match(/(\d+){3}/g);
+        if (m) var r = m[0], g = m[1], b = m[2];
+    }
+    if (typeof r != "undefined") return ((r * 299) + (g * 587) + (b * 114)) / 1000;
+}
+
 /** Create a browser window, used to createMainWindow and create a tab
  * @param url: The URL for the tab. The URL for mainWindow is 'https://www.facebook.com'
  * @param bounds: Window bounds
@@ -393,8 +447,7 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
  * @returns The window to be created.
  */
 function createBrowserWindow(url, options) {
-    let window = titleBarAppearance === '0' ? createBrowserWindowWithSystemTitleBar(url, options)
-        : createBrowserWindowWithCustomTitleBar(url, options)
+    let window = process.platform === 'linux' ? createBrowserWindowWithSystemTitleBar(url, options) : createBrowserWindowWithCustomTitleBar(url, options)
 
     window.on('enter-full-screen', () => {
         window.setMinimumSize(600, 600)
@@ -451,19 +504,14 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
             window.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
         })
     } else {
-        window.webContents.loadURL(url).then(() => window.focus())
+        window.webContents.loadURL(url, { userAgent: USER_AGENT })
     }
     createTouchBarForWindow(window)
 
     // This will create a tab everytime an <a target="_blank" /> is clicked, instead of a new window
     window.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
-        if (process.platform === 'darwin') {
-            window.addTabbedWindow(createBrowserWindow(url))
-        } else {
-            createBrowserWindow(url)
-        }
-        return { action: 'deny' }
+        return { action: 'allow' }
     })
     // Create context menu for each window
     window.webContents.on('context-menu', (event, params) => {
@@ -508,17 +556,12 @@ function createBrowserWindowWithSystemTitleBar(url, options) {
     return window
 }
 
-function createBrowserWindowWithCustomTitleBar(url, options) {
+function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstructorOptions) {
     let { bounds, blank, show } = options || { bounds: undefined, blank: false, show: options ? options.blank : true }
     let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.get('max') || '0' // Windows and Linux only
     let titleBarHeight = process.platform === 'win32' ? 32 : 28
     let rightMargin = process.platform === 'win32' ? 14 : 0
-    if (titleBarAppearance === '1') {
-        nativeTheme.themeSource = 'light'
-    } else {
-        nativeTheme.themeSource = 'dark'
-    }
     let window = new BaseWindow({
         x: x,
         y: y,
@@ -527,9 +570,9 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         minHeight: 600,
         minWidth: 800,
         show: false,
-        backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000',
-        titleBarStyle: titleBarAppearance !== '0' ? 'hidden' : undefined,
-        frame: titleBarAppearance !== '0',
+        /* backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000', */
+        titleBarStyle: 'hidden',
+        /* frame: titleBarAppearance !== '0', */
         tabbingIdentifier: 'WebView',
         title: 'Facebook',
         webPreferences: {
@@ -547,7 +590,7 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
         window.show()
     }
     // Title
-    let titleView = new WebContentsView({
+    let titleView = new WebContentsView(browserWindowConstructorOptions ?? {
         webPreferences: {
             nodeIntegration: true,
             enableRemoteModule: true,
@@ -577,26 +620,29 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     titleView.webContents.loadFile('src/title.html')
     if (blank) {
         mainView.webContents.loadFile(url).then(() => {
-            if (titleBarAppearance === '2') {
+            if (nativeTheme.shouldUseDarkColors) {
+                titleView.webContents.send('update-title-color', '#242526', true)
                 mainView.webContents.executeJavaScript('document.body.classList.add("dark")')
-            } else if (titleBarAppearance === '3') {
-                mainView.webContents.executeJavaScript('document.body.classList.add("black")')
             }
             mainView.webContents.executeJavaScript('window.nfbSearchEngine = ' + (settings.get('search') || '0'))
-        }).then(() => mainView.webContents.focus())
+        })
     } else {
-        mainView.webContents.loadURL(url).then(() => window.focus()).catch((e) => console.log(e))
+        if (url.startsWith('https://m.facebook.com')) {
+            url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
+        }
+        mainView.webContents.userAgent = USER_AGENT
+        mainView.webContents.loadURL(url, { userAgent: USER_AGENT })
     }
     createTouchBarForWindow(window)
-    mainView.webContents.on('did-fail-load', (e, errorCode, errorDescription) => {
-
-    })
     // Update title
     mainView.webContents.on('page-title-updated', (event, title, explicitSet) => {
         titleView.webContents.send('update-title', title)
         if (window && !window.isDestroyed()) window.setTitle(title)
         if (titleBarHeight > 100) titleView.webContents.openDevTools()
-        let js = `document.querySelector("meta[name=theme-color]").content`
+    })
+    // Update title color
+    mainView.webContents.on('did-change-theme-color', (e, color) => {
+        titleView.webContents.send('update-title-color', color, brightnessByColor(color) < 95)
     })
     // Create context menu for each window
     mainView.webContents.on('context-menu', (event, params) => {
@@ -606,17 +652,16 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
-            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
-            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
+            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.navigationHistory.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.navigationHistory.canGoForward()
         }
     }))
     mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
-        if (url.startsWith('https://m.facebook.com')) url = url.replace('https://m.facebook.com', 'https://www.facebook.com')
-        try {
-            createBrowserWindow(url)
+        if (url === 'about:blank') {
+            return { action: 'allow' }
+        } else {
+            createBrowserWindowWithCustomTitleBar(url)
             return { action: 'deny' }
-        } catch (e) {
-            console.log(e)
         }
     })
     mainView.webContents.on('enter-html-full-screen', () => {
@@ -629,6 +674,21 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     })
     mainView.webContents.session.on('will-download', (event, item, webContents) => {
         handleDownload(item, webContents)
+    })
+    mainView.webContents.on('did-create-window', (window, details) => {
+        window.webContents.on('context-menu', (e, params) => createContextMenuForWindow(window.webContents, params).popup())
+    })
+    window.on('enter-full-screen', () => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
+        mainView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: window.getBounds().height })
+    })
+    window.on('enter-html-full-screen', () => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
+        mainView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: window.getBounds().height })
+    })
+    window.on('leave-html-full-screen', () => {
+        titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
+        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
     window.on('leave-full-screen', () => {
         mainView.webContents.executeJavaScript('document.exitFullscreen()')
@@ -648,14 +708,11 @@ function createBrowserWindowWithCustomTitleBar(url, options) {
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
         if (menu !== null) {
-            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.canGoBack()
-            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.canGoForward()
+            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.navigationHistory.canGoBack()
+            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.navigationHistory.canGoForward()
             menu.getMenuItemById('app-menu-reload').enabled = true
             menu.getMenuItemById('app-menu-copy-url').enabled = true
             menu.getMenuItemById('app-menu-mute-tab').enabled = true
-            menu.getMenuItemById('app-menu-mute-website').visible = false
-            menu.getMenuItemById('app-menu-mute-tabs').visible = false
-            menu.getMenuItemById('app-menu-unmute-tabs').visible = false
         }
     })
     window.on('close', (event) => {
@@ -673,7 +730,6 @@ function handleDownload(item, webContents) {
     item['url'] = item.getURL()
     item['startTime'] = item.getStartTime()
     global.recentDownloads = [item, ...global.recentDownloads]
-    new Notification({ body: 'Download started', title: item.getFilename(), silent: true }).show()
     item.on('done', (event, state) => new Notification({
         body: 'Download ' + state,
         title: item.getFilename(),
@@ -681,10 +737,16 @@ function handleDownload(item, webContents) {
     }).show())
 }
 
+function getWebContents(window) {
+    let views = window.contentView.children
+    return views.length ? views[1].webContents : window.webContents
+}
+
 /**
  * Create the mainWindow object.
  * @see mainWindow
  * @see createBrowserWindow
+ * @deprecated
  */
 function createMainWindow(url) {
     mainWindow = createBrowserWindow(url || FACEBOOK_URL)
@@ -982,6 +1044,10 @@ function createAppMenu() {
                 label: 'About Native Facebook',
                 click: createAboutWindow
             }),
+            new MenuItem({
+                label: 'Check for Updates...',
+                click: () => autoUpdater.checkForUpdates(),
+            }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
                 label: isVentura ? 'Settings...' : 'Preferences...',
@@ -1019,11 +1085,8 @@ function createAppMenu() {
                 enabled: true,
                 accelerator: 'Cmd+Left',
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        browserWindow.webContents.goBack()
-                    } else if (browserWindow) {
-                        browserWindow.contentView.children[1].webContents.goBack()
+                    if (browserWindow) {
+                        getWebContents(browserWindow).goBack()
                     }
                 }
             }),
@@ -1033,11 +1096,8 @@ function createAppMenu() {
                 enabled: true,
                 accelerator: 'Cmd+Right',
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        browserWindow.webContents.goForward()
-                    } else if (browserWindow) {
-                        browserWindow.contentView.children[1].webContents.goForward()
+                    if (browserWindow) {
+                        getWebContents(browserWindow).goForward()
                     }
                 }
             }),
@@ -1046,11 +1106,8 @@ function createAppMenu() {
                 id: 'app-menu-reload',
                 accelerator: 'Cmd+R',
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        browserWindow.webContents.reload()
-                    } else if (browserWindow) {
-                        browserWindow.contentView.children[1].webContents.reload()
+                    if (browserWindow) {
+                        getWebContents(browserWindow).reload()
                     }
                 }
             }),
@@ -1059,11 +1116,8 @@ function createAppMenu() {
                 id: 'app-menu-copy-url',
                 visible: true,
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        clipboard.writeText(browserWindow.webContents.getURL())
-                    } else if (browserWindow) {
-                        clipboard.writeText(browserWindow.contentView.children[1].webContents.getURL())
+                    if (browserWindow) {
+                        clipboard.writeText(getWebContents(browserWindow).getURL())
                     }
                 }
             }),
@@ -1072,50 +1126,10 @@ function createAppMenu() {
                 id: 'app-menu-mute-tab',
                 visible: true,
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        browserWindow.webContents.setAudioMuted(!browserWindow.webContents.isAudioMuted())
-                    } else {
-                        browserWindow.contentView.children[1].webContents
-                            .setAudioMuted(!browserWindow.contentView.children[1].webContents.isAudioMuted())
+                    if (browserWindow) {
+                        let webContents = getWebContents(browserWindow)
+                        webContents.setAudioMuted(!webContents.isAudioMuted())
                     }
-                }
-            }),
-            new MenuItem({
-                label: 'Mute Website',
-                id: 'app-menu-mute-website',
-                visible: true,
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    let browserWindows = BrowserWindow.getAllWindows()
-                    if (!browserWindow) return
-                    browserWindow.webContents.executeJavaScript('window.location.origin')
-                        .then((origin) => {
-                            browserWindows.forEach((window) =>
-                                window.webContents.setAudioMuted(window.webContents.getURL().startsWith(origin)))
-                        })
-                }
-            }),
-            new MenuItem({
-                label: 'Mute All Tabs',
-                id: 'app-menu-mute-tabs',
-                visible: true,
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    let browserWindows = BrowserWindow.getAllWindows()
-                    if (!browserWindows) return
-                    browserWindows.forEach((window) => window.webContents.setAudioMuted(true))
-                }
-            }),
-            new MenuItem({
-                label: 'Unmute All Tabs',
-                id: 'app-menu-unmute-tabs',
-                visible: true,
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    let browserWindows = BrowserWindow.getAllWindows()
-                    if (!browserWindows) return
-                    browserWindows.forEach((window) => window.webContents.setAudioMuted(false))
                 }
             }),
             new MenuItem({ type: 'separator' }),
@@ -1124,98 +1138,31 @@ function createAppMenu() {
                 accelerator: 'Cmd+Shift+F',
                 id: 'fb-home',
                 click: (menuItem, browserWindow, event) => {
-                    if (!browserWindow) return
-                    if (titleBarAppearance === '0') {
-                        browserWindow.webContents.loadURL(FACEBOOK_URL)
-                    } else if (browserWindow) {
-                        browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL)
+                    if (browserWindow) {
+                        getWebContents(browserWindow).loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
                     }
                 }
             }),
             new MenuItem({
-                label: 'New Facebook Tab',
-                accelerator: 'Cmd+F',
-                visible: titleBarAppearance === '0',
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) {
-                        browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
-                    } else {
-                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        createBrowserWindow(FACEBOOK_URL, { bounds })
-                    }
-                },
-            }),
-            new MenuItem({
                 label: 'New Facebook Window',
-                visible: titleBarAppearance !== '0',
-                enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
                     createBrowserWindow(FACEBOOK_URL)
                 },
             }),
             new MenuItem({
-                label: 'New Messenger Tab',
-                accelerator: 'Cmd+M',
-                visible: titleBarAppearance === '0',
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) {
-                        browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
-                    } else {
-                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        createBrowserWindow(MESSENGER_URL, { bounds })
-                    }
-                },
-            }),
-            new MenuItem({
                 label: 'New Messenger Window',
-                visible: titleBarAppearance !== '0',
-                enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
                     createBrowserWindow(MESSENGER_URL)
                 },
             }),
             new MenuItem({
-                label: 'New Instagram Tab',
-                accelerator: 'Cmd+I',
-                visible: titleBarAppearance === '0',
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) {
-                        browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-                    } else {
-                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        createBrowserWindow(INSTAGRAM_URL, { bounds })
-                    }
-                },
-            }),
-            new MenuItem({
                 label: 'New Instagram Window',
-                visible: titleBarAppearance !== '0',
-                enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
                     createBrowserWindow(INSTAGRAM_URL)
                 },
             }),
             new MenuItem({
-                label: 'New Threads Tab',
-                accelerator: 'Cmd+T',
-                visible: titleBarAppearance === '0',
-                enabled: titleBarAppearance === '0',
-                click: (menuItem, browserWindow, event) => {
-                    if (browserWindow) {
-                        browserWindow.addTabbedWindow(createBrowserWindow(THREADS_URL))
-                    } else {
-                        let bounds = settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
-                        createBrowserWindow(THREADS_URL, { bounds })
-                    }
-                },
-            }),
-            new MenuItem({
                 label: 'New Threads Window',
-                visible: titleBarAppearance !== '0',
-                enabled: titleBarAppearance !== '0',
                 click: (menuItem, browserWindow, event) => {
                     createBrowserWindow(THREADS_URL)
                 },
@@ -1249,7 +1196,7 @@ function createAppMenu() {
                 visible: pip === '1',
                 click: (menuItem, browserWindow, event) => {
                     if (browserWindow) {
-                        browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+                        getWebContents(browserWindow).executeJavaScript(PIP_JS_EXE)
                     }
                 }
             }),
@@ -1258,10 +1205,10 @@ function createAppMenu() {
                 label: 'Toggle Developer Tools',
                 visible: dev === '1',
                 click: (menuItem, browserWindow, event) => {
-                    let window = BrowserWindow.getFocusedWindow()
-                    if (!window) return
-                    let browserViews = window.getWebContentsViews()
-                    let webContents = browserViews !== null && browserViews.length > 1 ? browserViews[1].webContents : window.webContents
+                    // let window = BrowserWindow.getFocusedWindow()
+                    // print(window !== null)
+                    // if (!window) return
+                    let webContents = getWebContents(browserWindow)
                     if (webContents.isDevToolsOpened()) webContents.closeDevTools()
                     else webContents.openDevTools()
                 }
@@ -1426,7 +1373,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
             label: 'Download Image',
             click: (menuItem, browserWindow, event) => {
                 let url = menuItem.transform ? menuItem.transform(srcURL) : srcURL
-                if (webContents) webContents.downloadURL(url)
+                if (webContents) webContents.downloadURL(url, { userAgent: USER_AGENT })
             }
         }))
         menu.append(new MenuItem({
@@ -1581,7 +1528,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         label: 'Request Facebook Desktop site',
         visible: webContents && webContents.getURL().startsWith('https://m.facebook.com'),
         click: (menuItem, browserWindow, event) => {
-            if (webContents) webContents.loadURL(webContents.getURL().replace('https://m.facebook.com', 'https://www.facebook.com'))
+            if (webContents) webContents.loadURL(webContents.getURL().replace('https://m.facebook.com', 'https://www.facebook.com'), { userAgent: USER_AGENT })
         }
     }))
     if (process.platform !== 'darwin' && sctxm === '0') {
@@ -1589,7 +1536,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         menu.append(new MenuItem({
             label: 'Facebook Home',
             click: (menuItem, browserWindow, event) => {
-                if (webContents) webContents.loadURL(FACEBOOK_URL)
+                if (webContents) webContents.loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
             }
         }))
         menu.append(new MenuItem({
@@ -1674,37 +1621,18 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
  * Create Dock actions on macOS
  */
 function createDockActions() {
-    let useTab = titleBarAppearance === '0'
     let template = [
         new MenuItem({
-            label: useTab ? 'New Facebook Tab' : 'New Facebook Window',
-            click: (menuItem, browserWindow, event) => {
-                if (browserWindow && useTab) {
-                    browserWindow.addTabbedWindow(createBrowserWindow(FACEBOOK_URL))
-                } else {
-                    createBrowserWindow(FACEBOOK_URL)
-                }
-            },
+            label: 'New Facebook Window',
+            click: (menuItem, browserWindow, event) => createBrowserWindow(FACEBOOK_URL)
         }),
         new MenuItem({
-            label: useTab ? 'New Messenger Tab' : 'New Messenger Window',
-            click: (menuItem, browserWindow, event) => {
-                if (browserWindow && useTab) {
-                    browserWindow.addTabbedWindow(createBrowserWindow(MESSENGER_URL))
-                } else {
-                    createBrowserWindow(MESSENGER_URL)
-                }
-            },
+            label: 'New Messenger Window',
+            click: (menuItem, browserWindow, event) => createBrowserWindow(MESSENGER_URL)
         }),
         new MenuItem({
-            label: useTab ? 'New Instagram Tab' : 'New Instagram Window',
-            click: (menuItem, browserWindow, event) => {
-                if (browserWindow && useTab) {
-                    browserWindow.addTabbedWindow(createBrowserWindow(INSTAGRAM_URL))
-                } else {
-                    createBrowserWindow(INSTAGRAM_URL)
-                }
-            },
+            label: 'New Instagram Window',
+            click: (menuItem, browserWindow, event) => createBrowserWindow(INSTAGRAM_URL)
         })
     ]
     app.dock.setMenu(Menu.buildFromTemplate(template))
