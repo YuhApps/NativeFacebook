@@ -29,5 +29,9 @@ exports.default = async function notarizing(context) {
     appleId,
     appleIdPassword,
     teamId
+  }).then(() => {
+    console.log('Binary notarized.')
+  }).catch((error) => {
+    console.log('Binary not notarized.', error)
   })
 }
