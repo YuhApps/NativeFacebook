@@ -62,7 +62,6 @@ let lastUpdate = 0
 electronRemote.initialize()
 
 app.whenReady().then(() => {
-    autoUpdater.autoDownload = false
     titleBarAppearance = settings.get('title-bar') || '0'
     forceDarkScrollbar = settings.get('scrollbar') || '0'
     sandbox = settings.get('sbox') === '1'
@@ -88,6 +87,9 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
+    if (process.platform !== 'darwin') {
+        checkForUpdates()
+    }
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -98,39 +100,7 @@ app.on('activate', (event, hasVisibleWindows) => {
         createBrowserWindow(FACEBOOK_URL)
     }
     app.show()
-    let now = Date.now()
-    if (now - lastUpdate > 86400000) {
-        lastUpdate = now
-        autoUpdater.checkForUpdates().then((result) => {
-            let info = result.updateInfo
-            if (info.version > app.getVersion()) {
-                return dialog.showMessageBox({
-                    message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
-                    detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
-                    buttons: ['Download and install']
-                })
-            } else {
-                return Promise.reject()
-            }
-        }).then((result) => {
-            if (result.response === 0) {
-                return autoUpdater.downloadUpdate()
-            } else {
-                return Promise.reject()
-            }
-        }).then((result) => {
-            return dialog.showMessageBox({
-                message: `The update is ready to be installed.`,
-                buttons: ['Install now', 'Install later']
-            })
-        }).then(({ response }) => {
-            if (response === 0) {
-                setImmediate(() => autoUpdater.quitAndInstall())
-            } else {
-                updateAvailable = true
-            }
-        })
-    }
+    checkForUpdates()
 })
 
 app.on('open-url', (event, url) => {
@@ -192,7 +162,7 @@ autoUpdater.on('update-not-available', (info) => {
 })
 
 autoUpdater.on('update-downloaded', (event) => {
-
+    updateAvailable = true
 })
 
 // Handle app context menu invoke on Windows
@@ -244,42 +214,7 @@ ipcMain.on('app-context-menu', () => {
     }))
     menu.append(new MenuItem({
         label: 'Check for Updates...',
-        click: () => autoUpdater.checkForUpdates().then((result) => {
-            let info = result.updateInfo
-            if (info.version > app.getVersion()) {
-                return dialog.showMessageBox({
-                    message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
-                    detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
-                    buttons: ['Download now', 'Download later']
-                })
-            } else {
-                return Promise.reject({
-                    message: `Native Facebook is up-to-date. What's new in this release:`,
-                    detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '')
-                })
-            }
-        }).then(({ response }) => {
-            if (response === 0) {
-                return autoUpdater.downloadUpdate()
-            } else {
-                return Promise.reject()
-            }
-        }).then(() => {
-            return dialog.showMessageBox({
-                message: `The update is ready to be installed.`,
-                buttons: ['Install now', 'Install later']
-            })
-        }).then(({ response }) => {
-            if (response === 0) {
-                setImmediate(() => autoUpdater.quitAndInstall())
-            } else {
-                updateAvailable = true
-            }
-        }).catch((error) => {
-            if (error) {
-                dialog.showMessageBox(error)
-            }
-        }),
+        click: () => checkForUpdates(),
     }))
     menu.append(new MenuItem({
         label: 'Developed by YUH APPS',
@@ -439,6 +374,66 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
     } else {
         return Promise.resolve()
     }
+}
+
+function checkForUpdates(showUpToDateDialog) {
+    let now = Date.now()
+    if (now - lastUpdate < 86400000) {
+        return
+    }
+    lastUpdate = now
+    autoUpdater.autoDownload = (settings.get('silent-update') || '0') === '1'
+    if (autoUpdater.autoDownload) {
+        autoUpdater.checkForUpdatesAndNotify()
+        return
+    }
+    autoUpdater.checkForUpdates().then((result) => {
+        if (!result) {
+            return Promise.reject()
+        }
+        let info = result.updateInfo
+        if (info.version > app.getVersion()) {
+            return dialog.showMessageBox({
+                message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
+                detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
+                buttons: ['Download now', 'Visit GitHub Releases', 'Cancel']
+            })
+        } else {
+            return Promise.reject(showUpToDateDialog ? `Native Facebook is up-to-date.` : undefined)
+        }
+    }).then(({ response }) => {
+        if (response === 0) {
+            return autoUpdater.downloadUpdate()
+        } else if (response === 1) {
+            shell.openExternal('https://github.com/YuhApps/NativeFacebook/releases')
+        } else {
+            return Promise.reject()
+        }
+    }).then(() => {
+        return dialog.showMessageBox({
+            message: `The update is ready to be installed.`,
+            buttons: ['Install and Relaunch', 'Install on App close']
+        })
+    }).then(({ response }) => {
+        if (response === 0) {
+            setImmediate(() => autoUpdater.quitAndInstall())
+        } else {
+            updateAvailable = true
+        }
+    }).catch((message) => {
+        if (typeof (message) === 'string') {
+            dialog.showMessageBox({
+                message: message,
+                buttons: ['OK', 'GitHub']
+            }).then(({ response }) => {
+                if (response === 1) {
+                    shell.openExternal('https://github.com/YuhApps/NativeFacebook/')
+                }
+            })
+        } else {
+            console.log(message)
+        }
+    })
 }
 
 function brightnessByColor(color) {
@@ -950,42 +945,7 @@ function createAppMenu() {
             }),
             new MenuItem({
                 label: 'Check for Updates...',
-                click: () => autoUpdater.checkForUpdates().then((result) => {
-                    let info = result.updateInfo
-                    if (info.version > app.getVersion()) {
-                        return dialog.showMessageBox({
-                            message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
-                            detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
-                            buttons: ['Download now', 'Download later']
-                        })
-                    } else {
-                        return Promise.reject({
-                            message: `Native Facebook is up-to-date. What's new in this release:`,
-                            detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '')
-                        })
-                    }
-                }).then(({ response }) => {
-                    if (response === 0) {
-                        return autoUpdater.downloadUpdate()
-                    } else {
-                        return Promise.reject()
-                    }
-                }).then(() => {
-                    return dialog.showMessageBox({
-                        message: `The update is ready to be installed.`,
-                        buttons: ['Install now', 'Install later']
-                    })
-                }).then(({ response }) => {
-                    if (response === 0) {
-                        setImmediate(() => autoUpdater.quitAndInstall())
-                    } else {
-                        updateAvailable = true
-                    }
-                }).catch((error) => {
-                    if (error) {
-                        dialog.showMessageBox(error)
-                    }
-                }),
+                click: () => checkForUpdates(true)
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
@@ -1506,42 +1466,7 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         }))
         menu.append(new MenuItem({
             label: 'Check for Updates...',
-            click: () => autoUpdater.checkForUpdates().then((result) => {
-                let info = result.updateInfo
-                if (info.version > app.getVersion()) {
-                    return dialog.showMessageBox({
-                        message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
-                        detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
-                        buttons: ['Download now', 'Download later']
-                    })
-                } else {
-                    return Promise.reject({
-                        message: `Native Facebook is up-to-date. What's new in this release:`,
-                        detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '')
-                    })
-                }
-            }).then(({ response }) => {
-                if (response === 0) {
-                    return autoUpdater.downloadUpdate()
-                } else {
-                    return Promise.reject()
-                }
-            }).then(() => {
-                return dialog.showMessageBox({
-                    message: `The update is ready to be installed.`,
-                    buttons: ['Install now', 'Install later']
-                })
-            }).then(({ response }) => {
-                if (response === 0) {
-                    setImmediate(() => autoUpdater.quitAndInstall())
-                } else {
-                    updateAvailable = true
-                }
-            }).catch((error) => {
-                if (error) {
-                    dialog.showMessageBox(error)
-                }
-            }),
+            click: () => checkForUpdates(true),
         }))
     }
     return menu
