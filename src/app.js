@@ -171,7 +171,7 @@ ipcMain.on('app-context-menu', () => {
     menu.append(new MenuItem({
         label: 'Facebook Home',
         click: (menuItem, browserWindow, event) => {
-            browserWindow.contentView.children[1].webContents.loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
+            getWebContents(browserWindow).loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
         }
     }))
     menu.append(new MenuItem({
@@ -204,7 +204,7 @@ ipcMain.on('app-context-menu', () => {
         id: 'pip',
         visible: (settings.get('pip') || '0') === '1',
         click: (menuItem, browserWindow, event) => {
-            browserWindow.webContents.executeJavaScript(PIP_JS_EXE)
+            getWebContents(browserWindow).executeJavaScript(PIP_JS_EXE)
         }
     }))
     menu.append(new MenuItem({ type: 'separator' }))
@@ -405,7 +405,7 @@ function checkForUpdates(showUpToDateDialog) {
         if (response === 0) {
             return autoUpdater.downloadUpdate()
         } else if (response === 1) {
-            shell.openExternal('https://github.com/YuhApps/NativeFacebook/releases')
+            createBrowserWindow('https://github.com/YuhApps/NativeFacebook/releases')
         } else {
             return Promise.reject()
         }
