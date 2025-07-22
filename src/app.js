@@ -1,4 +1,4 @@
-const { app, BaseWindow, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, session, shell, systemPreferences, TouchBar, WebContentsView, webContents } = require('electron')
+const { app, BaseWindow, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, session, shell, systemPreferences, TouchBar, WebContentsView, webContents, BrowserView } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const { autoUpdater } = require('electron-updater')
 const { platform, release } = require('os')
@@ -8,8 +8,8 @@ const fs = require('fs')
 
 const settings = require('./settings')
 
-const VERSION_CODE = 9
-const BUILD_DATE = '2025.03.14'
+const VERSION_CODE = 10
+const BUILD_DATE = '2025.07.20'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -87,9 +87,20 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
-    if (process.platform !== 'darwin') {
-        checkForUpdates()
-    }
+    checkForUpdates()
+
+    session.defaultSession.serviceWorkers.on('console-message', (event, messageDetails) => {
+        console.log(
+            'Got service worker message',
+            messageDetails,
+            'from',
+            session.defaultSession.serviceWorkers.getFromVersionID(messageDetails.versionId)
+        )
+    })
+
+    session.defaultSession.serviceWorkers.on('registration-completed', (event, details) => {
+        console.log(details.scope)
+    })
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -229,6 +240,14 @@ ipcMain.on('app-context-menu', () => {
 
 ipcMain.on('create-new-window', () => {
     createBrowserWindowWithCustomTitleBar('src/blank.html', { blank: true, show: true })
+})
+
+ipcMain.on('go-back', () => {
+    getWebContents(BaseWindow.getFocusedWindow()).goBack()
+})
+
+ipcMain.on('go-forward', () => {
+    getWebContents(BaseWindow.getFocusedWindow()).goForward()
 })
 
 ipcMain.on('delete-download-item', (event, id) => {
@@ -379,9 +398,11 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
 function checkForUpdates(showUpToDateDialog) {
     let now = Date.now()
     if (now - lastUpdate < 86400000) {
+        console.log("ABC", lastUpdate, now)
         return
     }
     lastUpdate = now
+    console.log("DEF", lastUpdate, now)
     autoUpdater.autoDownload = (settings.get('silent-update') || '0') === '1'
     if (autoUpdater.autoDownload) {
         autoUpdater.checkForUpdatesAndNotify()
@@ -577,8 +598,9 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     let { bounds, blank, show } = options || { bounds: undefined, blank: false, show: options ? options.blank : true }
     let { x, y, width, height } = bounds || settings.get('mainWindow') || DEFAULT_WINDOW_BOUNDS
     let max = settings.get('max') || '0' // Windows and Linux only
-    let titleBarHeight = process.platform === 'win32' ? 32 : 28
-    let rightMargin = process.platform === 'win32' ? 14 : 0
+    let platform = process.platform
+    let titleBarHeight = platform === 'win32' ? 32 : 28
+    let rightMargin = 0 // process.platform === 'win32' ? 14 : 0
     let window = new BaseWindow({
         x: x,
         y: y,
@@ -587,9 +609,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         minHeight: 600,
         minWidth: 800,
         show: false,
-        /* backgroundColor: titleBarAppearance === '1' ? '#ffffff' : titleBarAppearance === '2' ? '#242526' : '#000000', */
         titleBarStyle: 'hidden',
-        /* frame: titleBarAppearance !== '0', */
         tabbingIdentifier: 'WebView',
         title: 'Facebook',
         webPreferences: {
@@ -600,6 +620,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             plugins: true
         },
     })
+    window.setWindowButtonVisibility(platform === 'darwin')
     if (max === '1') {
         window.maximize()
     }
@@ -624,7 +645,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             spellcheck: settings.get('spell') === '1' || false,
             enableRemoteModule: blank,
             contextIsolation: true,
-            // preload: blank ? path.join(__dirname, 'blank_preload.js') : undefined,
+            preload: blank ? path.join(__dirname, 'blank_preload.js') : path.join(__dirname, 'preload.js'),
         }
     })
     // mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
@@ -664,6 +685,9 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     })
     // Update title color
     mainView.webContents.on('did-change-theme-color', (e, color) => {
+        if (url.startsWith('https://') == false) {
+            url = 'https://' + url
+        }
         titleView.webContents.send('update-title-color', color, brightnessByColor(color) < 95)
         let titleBarColors = settings.get('title-bar-colors') || {}
         titleBarColors[new URL(url).host] = color
@@ -676,10 +700,13 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     })
     mainView.webContents.on('did-navigate-in-page', ((event, url, httpResponseCode) => {
         let menu = Menu.getApplicationMenu()
+        let canGoBack = mainView.webContents.navigationHistory.canGoBack()
+        let canGoForward = mainView.webContents.navigationHistory.canGoForward()
         if (menu !== null) {
-            menu.getMenuItemById('app-menu-go-back').enabled = mainView.webContents.navigationHistory.canGoBack()
-            menu.getMenuItemById('app-menu-go-forward').enabled = mainView.webContents.navigationHistory.canGoForward()
+            menu.getMenuItemById('app-menu-go-back').enabled = canGoBack
+            menu.getMenuItemById('app-menu-go-forward').enabled = canGoForward
         }
+        titleView.webContents.send('did-navigate-in-page', canGoBack, canGoForward)
     }))
     mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url === 'about:blank') {

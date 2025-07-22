@@ -9,6 +9,7 @@
         body {
             margin: 0;
             padding: 0;
+            scrollbar-width: none;
             user-select: none;
         }
 
@@ -18,6 +19,7 @@
             color: #000000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             font-size: 14px;
+            justify-items: center;
             overflow: hidden;
             text-overflow: ellipsis;
             vertical-align: middle;
@@ -42,18 +44,18 @@
 
         div#main span.title {
             flex: 1;
+            font-weight: bold;
             overflow: hidden;
+            text-align: center;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
         div#main.mac {
             display: flex;
-            font-weight: bold;
             height: 24px;
             line-height: 28px;
-            padding: 2px 80px;
-            text-align: center;
+            padding: 2px;
         }
 
         div#main.mac img {
@@ -108,46 +110,103 @@
             -webkit-app-region: no-drag;
         }
 
-        .window-button svg path {
+        svg path {
             fill: black;
         }
 
-        .window-button.hover svg path {
-            fill: black !important;
-        }
-
-        .dark .window-button svg path,
-        .black .window-button svg path {
+        .dark svg path,
+        .black svg path {
             fill: white;
         }
 
-        .window-button.close.hover {
-            background: #ff5e57;
+        .title {
+            margin-left: 8px;
+            margin-right: 8px;
         }
 
-        .window-button.maximize.hover,
-        .window-button.unmaximize.hover {
-            background: #28c840;
+        .dark .title,
+        .black .title {
+            color: white;
         }
 
-        .window-button.minimize.hover {
-            background: #ffbe2c;
+        button.close.hover {
+            background: #e74c3c;
         }
 
-        .window-button.new-tab.hover {
-            background: #36c0ff;
+        button.hover {
+            background: #80808080;
+        }
+
+        .nav-button {
+            background: transparent;
+            border: none;
+            opacity: 0.25;
+            outline: none;
+            -webkit-app-region: no-drag;
+        }
+
+        .nav-button.ok {
+            opacity: 1;
+        }
+
+        .mac-nav-button svg {
+            height: 12px;
+            width: 12px;
+        }
+
+        .win-nav-button {
+            height: 32px;
+            width: 40px;
+        }
+
+        div#main.win .mac-nav-button {
+            display: none;
+        }
+
+        div#main.mac .win-nav-button {
+            display: none;
         }
     </style>
 </head>
 
 <body>
     <div class="" id="main">
-        <img alt="">
-        <span class="title"></span>
+        <img alt="" class="hidden">
         <button class="window-button new-tab">
-            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
+            <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <!-- <path
+                    d="M11,8.708l-1.375,0l0,-1.375l-0.917,0l0,1.375l-1.375,0l0,0.917l1.375,0l0,1.375l0.917,0l0,-1.375l1.375,0l0,-0.917Zm0,-8.708l0,6.417l-0.917,-0l0,-3.667l-9.166,0l-0,7.333l5.5,0l-0,0.917l-6.417,0l0,-11l11,0Z" /> -->
+                <!-- <path
+                    d="M1.5,8C2.328,8 3,8.672 3,9.5C3,10.328 2.328,11 1.5,11C0.672,11 0,10.328 0,9.5C0,8.672 0.672,8 1.5,8ZM5.5,8C6.328,8 7,8.672 7,9.5C7,10.328 6.328,11 5.5,11C4.672,11 4,10.328 4,9.5C4,8.672 4.672,8 5.5,8ZM9.5,8C10.328,8 11,8.672 11,9.5C11,10.328 10.328,11 9.5,11C8.672,11 8,10.328 8,9.5C8,8.672 8.672,8 9.5,8Z" /> -->
                 <path
-                    d="M11,8.708l-1.375,0l0,-1.375l-0.917,0l0,1.375l-1.375,0l0,0.917l1.375,0l0,1.375l0.917,0l0,-1.375l1.375,0l0,-0.917Zm0,-8.708l0,6.417l-0.917,-0l0,-3.667l-9.166,0l-0,7.333l5.5,0l-0,0.917l-6.417,0l0,-11l11,0Z" />
+                    d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z" />
+            </svg>
+        </button>
+        <button class="nav-button win-nav-button back">
+            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1.01372,0,0,1,-0.00495098,-0.25)">
+                    <path
+                        d="M0.383,5.604L0.382,5.605C0.369,5.648 0.362,5.692 0.361,5.738L0.361,5.762C0.362,5.808 0.369,5.852 0.382,5.895L0.383,5.896C0.406,5.972 0.447,6.043 0.507,6.104L4.396,9.993C4.592,10.188 4.908,10.188 5.104,9.993C5.299,9.798 5.299,9.481 5.104,9.286L2.068,6.25L10,6.25C10.276,6.25 10.5,6.026 10.5,5.75C10.5,5.474 10.276,5.25 10,5.25L2.068,5.25L5.104,2.214C5.299,2.019 5.299,1.702 5.104,1.507C4.908,1.312 4.592,1.312 4.396,1.507L0.507,5.396C0.447,5.457 0.406,5.528 0.383,5.604Z" />
+                </g>
+            </svg>
+        </button>
+        <button class="nav-button win-nav-button forward">
+            <svg width="11" height="11" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(-1.01372,0,0,1,11.005,-0.25)">
+                    <path
+                        d="M0.383,5.604L0.382,5.605C0.369,5.648 0.362,5.692 0.361,5.738L0.361,5.762C0.362,5.808 0.369,5.852 0.382,5.895L0.383,5.896C0.406,5.972 0.447,6.043 0.507,6.104L4.396,9.993C4.592,10.188 4.908,10.188 5.104,9.993C5.299,9.798 5.299,9.481 5.104,9.286L2.068,6.25L10,6.25C10.276,6.25 10.5,6.026 10.5,5.75C10.5,5.474 10.276,5.25 10,5.25L2.068,5.25L5.104,2.214C5.299,2.019 5.299,1.702 5.104,1.507C4.908,1.312 4.592,1.312 4.396,1.507L0.507,5.396C0.447,5.457 0.406,5.528 0.383,5.604Z" />
+                </g>
+            </svg>
+        </button>
+        <span class="title"></span>
+        <button class="nav-button mac-nav-button back">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M16.67 0l2.83 2.829-9.339 9.175 9.339 9.167-2.83 2.829-12.17-11.996z" />
+            </svg>
+        </button>
+        <button class="nav-button mac-nav-button forward">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M7.33 24l-2.83-2.829 9.339-9.175-9.339-9.167 2.83-2.829 12.17 11.996z" />
             </svg>
         </button>
         <button class="window-button minimize"> <!-- min -->
@@ -183,6 +242,7 @@
         let titleText = document.querySelector('div span')
         let max = settings.get('max') || '0'
         let windowButtons = document.querySelectorAll('.window-button')
+        let winNavButtons = document.querySelectorAll('.win-nav-button')
         let newTabButton = windowButtons[0]
         let minButton = windowButtons[1]
         let maxButton = windowButtons[2]
@@ -196,6 +256,14 @@
             img.src = 'assets/facebook.png'
             img.onclick = (e) => ipcRenderer.send('app-context-menu')
             windowButtons.forEach((button) => {
+                button.onmouseenter = (e) => {
+                    button.classList.add('hover')
+                }
+                button.onmouseleave = (e) => {
+                    button.classList.remove('hover')
+                }
+            })
+            winNavButtons.forEach((button) => {
                 button.onmouseenter = (e) => {
                     button.classList.add('hover')
                 }
@@ -218,7 +286,7 @@
             maxButton.onclick = (e) => currentWindow.maximize()
             unmaxButton.onclick = (e) => currentWindow.unmaximize()
             minButton.onclick = (e) => currentWindow.minimize()
-            newTabButton.onclick = (e) => ipcRenderer.send('create-new-window')
+            newTabButton.onclick = (e) => ipcRenderer.send('app-context-menu')
 
             currentWindow.on('minimize', () => {
                 windowButtons.forEach((button) => {
@@ -256,18 +324,43 @@
                 }
             }
         }
+
+        document.querySelectorAll('.back').forEach((back) => {
+            back.addEventListener('click', () => {
+                ipcRenderer.send('go-back')
+            })
+        })
+        document.querySelectorAll('.forward').forEach((forward) => {
+            forward.addEventListener('click', () => {
+                ipcRenderer.send('go-forward')
+            })
+        })
+
         ipcRenderer.on('update-title', (event, title, themeColor) => {
             titleText.textContent = title
         })
+
         ipcRenderer.on('update-title-color', (event, color, isDark) => {
-            console.log(color)
-            document.querySelector('#main').style.backgroundColor = color
-            titleText.style.color = isDark ? '#fff' : '#000'
+            let main = document.querySelector('#main')
+            main.style.backgroundColor = color
+            main.classList[isDark ? 'add' : 'remove']('dark')
+            // titleText.style.color = isDark ? '#fff' : '#000'
+        })
+
+        ipcRenderer.on('did-navigate-in-page', (event, canGoBack, canGoForward) => {
+            console.log('d', canGoBack, canGoForward)
+            document.querySelectorAll('.back').forEach((back) => {
+                back.classList[canGoBack ? 'add' : 'remove']('ok')
+            })
+            document.querySelectorAll('.forward').forEach((forward) => {
+                forward.classList[canGoForward ? 'add' : 'remove']('ok')
+            })
         })
 
         function lumiananceFromRGB([r, g, b]) {
             return r * 0.299 + g * 0.587 + b * 0.114;
         }
+
         function hexToRgb(hex) {
             if (hex.startsWith('#')) hex = hex.substring(1)
             let bigint = parseInt(hex, 16);

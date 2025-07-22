@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
             --fb-nav-dark: #242526;
             --fb-color-dark: #d2e3fc;
         }
+
         body {
             font-family: sans-serif;
             height: 100%;
@@ -21,40 +23,61 @@
             padding: 20px;
             user-select: none;
         }
+
         body.dark {
             background: #242526;
             color: white;
             color-scheme: dark;
         }
-        h1, h2, h3, h4, h5, h6, strong {
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        strong {
             color: var(--fb-color);
         }
-        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6, .dark strong {
+
+        .dark h1,
+        .dark h2,
+        .dark h3,
+        .dark h4,
+        .dark h5,
+        .dark h6,
+        .dark strong {
             color: var(--fb-color-dark)
         }
+
         .hidden {
             display: none;
         }
+
         #wrapper {
             display: flex;
             flex-direction: row;
             vertical-align: middle;
         }
+
         #wrapper img {
             align-self: center;
             height: 160px;
             margin-right: 20px;
             vertical-align: middle;
-        }        
+        }
+
         #wrapper div {
             vertical-align: middle;
         }
+
         .window-buttons-wrapper {
             display: flex;
             position: fixed;
             right: 0;
             top: 0;
         }
+
         .window-button {
             background: transparent;
             border: none;
@@ -63,35 +86,49 @@
             width: 48px;
             -webkit-app-region: no-drag;
         }
+
         .window-button svg path {
             fill: black;
         }
+
         .window-button.hover svg path {
             fill: black !important;
         }
-        .dark .window-button svg path, .black .window-button svg path {
+
+        .dark .window-button svg path,
+        .black .window-button svg path {
             fill: white;
         }
+
         .window-button.close.hover {
             background: #ff5e57;
         }
-        .window-button.maximize.hover, .window-button.unmaximize.hover {
+
+        .window-button.maximize.hover,
+        .window-button.unmaximize.hover {
             background: #28c840;
         }
+
         .window-button.minimize.hover {
             background: #ffbe2c;
         }
-        #app-version, #yuh {
+
+        #app-version,
+        #yuh {
             color: var(--fb-color);
             font-weight: bold;
         }
-        .dark #app-version, .dark #yuh {
+
+        .dark #app-version,
+        .dark #yuh {
             color: var(--fb-color-dark);
         }
+
         #yuh {
             border-bottom: 1px solid var(--fb-color);
             cursor: pointer;
         }
+
         .dark #yuh {
             border-bottom: 1px solid var(--fb-color-dark);
         }
@@ -104,22 +141,35 @@
         <div>
             <h3>Native Facebook</h3>
             <p>Version <span id="app-version"></span></p>
-            <p>Developed by <strong>YUH APPS</strong>. Made with <strong>Electron by GitHub</strong>. "Facebook" is a registered trademark of Facebook, Inc.</p>
-            <p><span id="yuh">© 2023 YUH APPS. All rights reserved.</span></p>
+            <p>Developed by <strong>YUH APPS</strong>. Made with <strong>Electron by GitHub</strong>. "Facebook" is a
+                registered trademark of Meta Platforms, Inc.</p>
+            <p><span id="yuh">Developed by YUH APPS.</span></p>
         </div>
     </div>
     <div class="window-buttons-wrapper hidden">
         <button class="window-button minimize hidden"> <!-- min -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 4.399V5.5H0V4.399h11z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 4.399V5.5H0V4.399h11z' fill='#000' />
+            </svg>
         </button>
         <button class="window-button maximize hidden"> <!-- max -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M11 0v11H0V0h11zM9.899 1.101H1.1V9.9h8.8V1.1z' fill='#000' />
+            </svg>
         </button>
         <button class="window-button unmaximize hidden"> <!-- unmax -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M11 8.798H8.798V11H0V2.202h2.202V0H11v8.798zm-3.298-5.5h-6.6v6.6h6.6v-6.6zM9.9 1.1H3.298v1.101h5.5v5.5h1.1v-6.6z'
+                    fill='#000' />
+            </svg>
         </button>
         <button class="window-button close hidden"> <!-- close -->
-            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z' fill='#000'/></svg>
+            <svg width='11' height='11' viewBox='0 0 11 11' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path
+                    d='M6.279 5.5L11 10.221l-.779.779L5.5 6.279.779 11 0 10.221 4.721 5.5 0 .779.779 0 5.5 4.721 10.221 0 11 .779 6.279 5.5z'
+                    fill='#000' />
+            </svg>
         </button>
     </div>
     <script>
@@ -146,10 +196,10 @@
 
         appVersion.textContent = remote.app.getVersion()
 
-    document.querySelector('#yuh').onclick = (e) => {
-        ipcRenderer.send('open-yh-page')
-        window.close()
-    }
+        document.querySelector('#yuh').onclick = (e) => {
+            ipcRenderer.send('open-yh-page')
+            window.close()
+        }
 
         ipcRenderer.on('dark', (e, dark, version) => {
             if (dark) document.body.classList.add('dark')

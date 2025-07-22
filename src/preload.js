@@ -1,4 +1,4 @@
-const ipcRenderer = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 
 function setNotificationCallback(createCallback, clickCallback) {
     var OldNotification = window.Notification;
