@@ -1,4 +1,4 @@
-const { app, BaseWindow, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, powerMonitor, ShareMenu, screen, session, shell, systemPreferences, TouchBar, WebContentsView, webContents, BrowserView } = require('electron')
+const { app, BaseWindow, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain, Menu, MenuItem, nativeImage, nativeTheme, Notification, screen, session, shell, systemPreferences, TouchBar, WebContentsView, View } = require('electron')
 const electronRemote = require('@electron/remote/main')
 const { autoUpdater } = require('electron-updater')
 const { platform, release } = require('os')
@@ -9,7 +9,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 10
-const BUILD_DATE = '2025.07.20'
+const BUILD_DATE = '2025.10.15'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -54,8 +54,8 @@ const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/
 
 let aboutWindow, downloadsWindow, prefsWindow
 let titleBarAppearance, forceDarkScrollbar
-let tempUrl, updateAvailable = false, sandbox = false
-let lastUpdate = 0
+let tempUrl, sandbox = false
+let lastUpdate = 0, updateInfo = undefined, updateAvailable = false, updateDownloaded = false
 
 /** Basic Electron app events: */
 
@@ -87,20 +87,6 @@ app.whenReady().then(() => {
         createBrowserWindow(tempUrl)
         tempUrl = undefined
     }
-    checkForUpdates()
-
-    session.defaultSession.serviceWorkers.on('console-message', (event, messageDetails) => {
-        console.log(
-            'Got service worker message',
-            messageDetails,
-            'from',
-            session.defaultSession.serviceWorkers.getFromVersionID(messageDetails.versionId)
-        )
-    })
-
-    session.defaultSession.serviceWorkers.on('registration-completed', (event, details) => {
-        console.log(details.scope)
-    })
 })
 
 app.on('activate', (event, hasVisibleWindows) => {
@@ -111,7 +97,6 @@ app.on('activate', (event, hasVisibleWindows) => {
         createBrowserWindow(FACEBOOK_URL)
     }
     app.show()
-    checkForUpdates()
 })
 
 app.on('open-url', (event, url) => {
@@ -146,8 +131,10 @@ app.on('before-quit', (event) => {
 })
 
 app.on('window-all-closed', () => {
-    if (updateAvailable) {
-        autoUpdater.quitAndInstall()
+    if (app.isPackaged === false) {
+        app.quit()
+    } else if (updateDownloaded) {
+        autoUpdater.quitAndInstall(true, false)
     } else if (process.platform !== 'darwin') {
         app.quit()
     } else {
@@ -165,25 +152,110 @@ autoUpdater.on('error', (error) => {
 })
 
 autoUpdater.on('update-available', (info) => {
-
+    updateInfo = info
+    updateAvailable = true
 })
 
 autoUpdater.on('update-not-available', (info) => {
-
+    updateAvailable = false
 })
 
 autoUpdater.on('update-downloaded', (event) => {
-    updateAvailable = true
+    updateDownloaded = true
+    updateInfo = event
+    new Notification({
+        title: 'New Native Facebook has been downloaded and ready to be installed',
+        body: 'Click here to install',
+        silent: true,
+    }).on('click', (e) => {
+        dialog.showMessageBox({
+            title: `Native Facebook ${event.releaseName || ''}`,
+            message: event.releaseNotes,
+            buttons: ['Install now', 'Install later']
+        }).then(({ response }) => {
+            if (response === 0) {
+                autoUpdater.quitAndInstall()
+            }
+        })
+    }).show()
+})
+
+nativeTheme.on('updated', () => {
+    BaseWindow.getAllWindows().forEach((window) => {
+        let children = window.contentView.children
+        if (children && children[0]) {
+            children[0].webContents.send('update-title-color', 0, nativeTheme.shouldUseDarkColors)
+        }
+    })
+})
+
+ipcMain.on('show-update-dialog', (event) => {
+    dialog.showMessageBox({
+        message: updateInfo ? `Native Facebook ${updateInfo.version} is available to install.` : 'Native Facebook is up-to-date.',
+        detail: updateInfo ? updateInfo.releaseNotes : '',
+        buttons: updateInfo ? ['Install on quit', 'Install now'] : ['OK'],
+        defaultId: 1,
+    }).then(({ response }) => {
+        if (response === 1) autoUpdater.quitAndInstall()
+    })
 })
 
 // Handle app context menu invoke on Windows
 ipcMain.on('app-context-menu', () => {
     let menu = new Menu()
+    if (updateDownloaded) {
+        menu.append(new MenuItem({
+            label: 'Install updates',
+            click: (menuItem, browserWindow, event) => {
+                dialog.showMessageBox({
+                    message: updateInfo ? `Native Facebook ${updateInfo.version} is available to install.` : 'Native Facebook is up-to-date.',
+                    detail: updateInfo ? updateInfo.releaseNotes : '',
+                    buttons: updateInfo ? ['Install on quit', 'Install now'] : ['OK'],
+                    defaultId: 1,
+                }).then(({ response }) => {
+                    if (response === 1) autoUpdater.quitAndInstall()
+                })
+            }
+        }))
+        menu.append(new MenuItem({ type: 'separator' }))
+    }
     menu.append(new MenuItem({
         label: 'Facebook Home',
         click: (menuItem, browserWindow, event) => {
             getWebContents(browserWindow).loadURL(FACEBOOK_URL, { userAgent: USER_AGENT })
         }
+    }))
+    menu.append(new MenuItem({
+        label: 'New Facebook Window',
+        click: (menuItem, browserWindow, event) => {
+            let window = createBrowserWindow('https://www.facebook.com')
+            window.show()
+            window.focus()
+        },
+    }))
+    menu.append(new MenuItem({
+        label: 'New Messenger Window',
+        click: (menuItem, browserWindow, event) => {
+            let window = createBrowserWindow('https://www.messenger.com')
+            window.show()
+            window.focus()
+        },
+    }))
+    menu.append(new MenuItem({
+        label: 'New Instagram Window',
+        click: (menuItem, browserWindow, event) => {
+            let window = createBrowserWindow('https://www.instagram.com')
+            window.show()
+            window.focus()
+        },
+    }))
+    menu.append(new MenuItem({
+        label: 'New Threads Window',
+        click: (menuItem, browserWindow, event) => {
+            let window = createBrowserWindow('https://www.threads.com')
+            window.show()
+            window.focus()
+        },
     }))
     menu.append(new MenuItem({
         label: 'New Blank Window',
@@ -224,8 +296,11 @@ ipcMain.on('app-context-menu', () => {
         click: createAboutWindow
     }))
     menu.append(new MenuItem({
-        label: 'Check for Updates...',
-        click: () => checkForUpdates(),
+        label: updateDownloaded ? 'Install Updates' : 'Check for Updates...',
+        click: () => updateDownloaded ? autoUpdater.quitAndInstall() : checkForUpdates({
+            forceCheckForUpdates: true,
+            showUpToDateDialog: true
+        }),
     }))
     menu.append(new MenuItem({
         label: 'Developed by YUH APPS',
@@ -243,11 +318,11 @@ ipcMain.on('create-new-window', () => {
 })
 
 ipcMain.on('go-back', () => {
-    getWebContents(BaseWindow.getFocusedWindow()).goBack()
+    getNavigationHistory(BaseWindow.getFocusedWindow()).goBack()
 })
 
 ipcMain.on('go-forward', () => {
-    getWebContents(BaseWindow.getFocusedWindow()).goForward()
+    getNavigationHistory(BaseWindow.getFocusedWindow()).goForward()
 })
 
 ipcMain.on('delete-download-item', (event, id) => {
@@ -395,66 +470,73 @@ async function askRevertToTheDefaultBrowser(menuItem, show) {
     }
 }
 
-function checkForUpdates(showUpToDateDialog) {
+function checkForUpdates({ forceCheckForUpdates, showUpToDateDialog }) {
+    if (forceCheckForUpdates) {
+        cfu()
+        return
+    }
     let now = Date.now()
     if (now - lastUpdate < 86400000) {
-        console.log("ABC", lastUpdate, now)
-        return
+        if (!updateInfo) return
+        return dialog.showMessageBox({
+            message: `There's a new available update, ${updateInfo.version}, you currently have ${app.getVersion()}. What's new:`,
+            detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
+            buttons: ['Download now', 'Visit GitHub Releases', 'Cancel']
+        })
     }
     lastUpdate = now
-    console.log("DEF", lastUpdate, now)
-    autoUpdater.autoDownload = (settings.get('silent-update') || '0') === '1'
-    if (autoUpdater.autoDownload) {
-        autoUpdater.checkForUpdatesAndNotify()
-        return
-    }
-    autoUpdater.checkForUpdates().then((result) => {
-        if (!result) {
-            return Promise.reject()
-        }
-        let info = result.updateInfo
-        if (info.version > app.getVersion()) {
+    cfu()
+
+    function cfu() {
+        autoUpdater.checkForUpdates().then((result) => {
+            if (!result) {
+                return Promise.reject('Failed to check for updates.')
+            }
+            let info = result.updateInfo
+            if (info.version > app.getVersion()) {
+                return dialog.showMessageBox({
+                    message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
+                    detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
+                    buttons: ['Download now', 'Visit GitHub Releases', 'Cancel']
+                })
+            } else {
+                return Promise.reject(showUpToDateDialog ? `Native Facebook is up-to-date.` : undefined)
+            }
+        }).then(({ response }) => {
+            if (response === 0) {
+                return autoUpdater.downloadUpdate()
+            } else if (response === 1) {
+                createBrowserWindow('https://github.com/YuhApps/NativeFacebook/releases')
+            } else {
+                return Promise.reject()
+            }
+        }).then(() => {
             return dialog.showMessageBox({
-                message: `There's a new available update, ${info.version}, you currently have ${app.getVersion()}. What's new:`,
-                detail: info.releaseNotes.replace(/<\/?[^>]+(>|$)/g, '') || '',
-                buttons: ['Download now', 'Visit GitHub Releases', 'Cancel']
+                message: `The update is ready to be installed.`,
+                buttons: ['Install and Relaunch', 'Install on App close']
             })
-        } else {
-            return Promise.reject(showUpToDateDialog ? `Native Facebook is up-to-date.` : undefined)
-        }
-    }).then(({ response }) => {
-        if (response === 0) {
-            return autoUpdater.downloadUpdate()
-        } else if (response === 1) {
-            createBrowserWindow('https://github.com/YuhApps/NativeFacebook/releases')
-        } else {
-            return Promise.reject()
-        }
-    }).then(() => {
-        return dialog.showMessageBox({
-            message: `The update is ready to be installed.`,
-            buttons: ['Install and Relaunch', 'Install on App close']
+        }).then(({ response }) => {
+            if (response === 0) {
+                setImmediate(() => autoUpdater.quitAndInstall())
+            } else {
+                updateAvailable = true
+            }
+        }).catch((message) => {
+            if (app.isPackaged === false) return
+            if (typeof (message) === 'string') {
+                dialog.showMessageBox({
+                    message: message,
+                    buttons: ['OK', 'GitHub']
+                }).then(({ response }) => {
+                    if (response === 1) {
+                        shell.openExternal('https://github.com/YuhApps/NativeFacebook/')
+                    }
+                })
+            } else {
+                console.log(message)
+            }
         })
-    }).then(({ response }) => {
-        if (response === 0) {
-            setImmediate(() => autoUpdater.quitAndInstall())
-        } else {
-            updateAvailable = true
-        }
-    }).catch((message) => {
-        if (typeof (message) === 'string') {
-            dialog.showMessageBox({
-                message: message,
-                buttons: ['OK', 'GitHub']
-            }).then(({ response }) => {
-                if (response === 1) {
-                    shell.openExternal('https://github.com/YuhApps/NativeFacebook/')
-                }
-            })
-        } else {
-            console.log(message)
-        }
-    })
+    }
 }
 
 function brightnessByColor(color) {
@@ -483,6 +565,10 @@ function brightnessByColor(color) {
  * @returns The window to be created.
  */
 function createBrowserWindow(url, options) {
+    checkForUpdates({
+        forceCheckForUpdates: false,
+        showUpToDateDialog: false
+    })
     let window = process.platform === 'linux' ? createBrowserWindowWithSystemTitleBar(url, options) : createBrowserWindowWithCustomTitleBar(url, options)
     window.on('enter-full-screen', () => {
         window.setMinimumSize(600, 600)
@@ -609,6 +695,8 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         minHeight: 600,
         minWidth: 800,
         show: false,
+        vibrancy: 'header',
+        backgroundMaterial: 'mica',
         titleBarStyle: 'hidden',
         tabbingIdentifier: 'WebView',
         title: 'Facebook',
@@ -617,7 +705,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
             sandbox: sandbox,
-            plugins: true
+            plugins: true,
         },
     })
     window.setWindowButtonVisibility(platform === 'darwin')
@@ -636,6 +724,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         }
     })
     window.contentView.addChildView(titleView)
+    titleView.setBackgroundColor('#00000000')
     titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width - (max === '1' ? rightMargin : 0), height: titleBarHeight })
     // Main content
     let mainView = new WebContentsView({
@@ -643,14 +732,25 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             sandbox: sandbox,
             scrollBounce: true,
             spellcheck: settings.get('spell') === '1' || false,
-            enableRemoteModule: blank,
+            enableRemoteModule: false,
             contextIsolation: true,
             preload: blank ? path.join(__dirname, 'blank_preload.js') : path.join(__dirname, 'preload.js'),
+            nodeIntegration: true,
         }
     })
     // mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
     window.contentView.addChildView(mainView)
-    mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
+
+    let margin = 5
+    let radius = 7
+
+    let borderView = new View()
+    borderView.setBorderRadius(radius)
+    borderView.setBounds({ x: margin - 1, y: titleBarHeight, width: 2 + -2 * margin + window.getBounds().width - rightMargin, height: -1 * margin + window.getBounds().height - titleBarHeight })
+    window.contentView.addChildView(borderView)
+
+    mainView.setBorderRadius(radius)
+    mainView.setBounds({ x: margin, y: titleBarHeight + 1, width: -2 * margin + window.getBounds().width - rightMargin, height: -2 + -1 * margin + window.getBounds().height - titleBarHeight })
     // Load URL or File
     electronRemote.enable(titleView.webContents)
     electronRemote.enable(mainView.webContents)
@@ -673,7 +773,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         let titleBarColors = settings.get('title-bar-colors')
         let color = titleBarColors ? titleBarColors[new URL(url).host] : undefined
         if (color) {
-            titleView.webContents.send('update-title-color', color, brightnessByColor(color) < 95)
+            titleView.webContents.send('update-title-color', color, nativeTheme.shouldUseDarkColors)
         }
     }
     createTouchBarForWindow(window)
@@ -682,13 +782,15 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         titleView.webContents.send('update-title', title)
         if (window && !window.isDestroyed()) window.setTitle(title)
         if (titleBarHeight > 100) titleView.webContents.openDevTools()
+        borderView.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#303030' : '#c8c8c8')
     })
     // Update title color
     mainView.webContents.on('did-change-theme-color', (e, color) => {
         if (url.startsWith('https://') == false) {
             url = 'https://' + url
         }
-        titleView.webContents.send('update-title-color', color, brightnessByColor(color) < 95)
+        borderView.setBackgroundColor(brightnessByColor(color) < 95 ? '#303030' : '#c8c8c8')
+        // titleView.webContents.send('update-title-color', color, brightnessByColor(color) < 95)
         let titleBarColors = settings.get('title-bar-colors') || {}
         titleBarColors[new URL(url).host] = color
         settings.set('title-bar-colors', titleBarColors)
@@ -707,6 +809,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             menu.getMenuItemById('app-menu-go-forward').enabled = canGoForward
         }
         titleView.webContents.send('did-navigate-in-page', canGoBack, canGoForward)
+        titleView.webContents.send('update-title', mainView.webContents.getTitle())
     }))
     mainView.webContents.setWindowOpenHandler(({ url, frameName, features, disposition, referrer, postBody }) => {
         if (url === 'about:blank') {
@@ -716,6 +819,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
             return { action: 'deny' }
         }
     })
+    /*
     mainView.webContents.on('enter-html-full-screen', () => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: 0 })
         mainView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: window.getBounds().height })
@@ -724,6 +828,7 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
         mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
+    */
     mainView.webContents.session.on('will-download', (event, item, webContents) => {
         handleDownload(item, webContents)
     })
@@ -740,22 +845,29 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     })
     window.on('leave-html-full-screen', () => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
-        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+        borderView.setBounds({ x: margin - 1, y: titleBarHeight, width: 2 + -2 * margin + window.getBounds().width - rightMargin, height: -1 * margin + window.getBounds().height - titleBarHeight })
+        mainView.setBounds({ x: margin, y: titleBarHeight + 1, width: -2 * margin + window.getBounds().width - rightMargin, height: -2 + -1 * margin + window.getBounds().height - titleBarHeight })
+        // mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
     })
     window.on('leave-full-screen', () => {
         mainView.webContents.executeJavaScript('document.exitFullscreen()')
     })
     window.on('maximize', (e) => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
-        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
+        // mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width - rightMargin, height: window.getBounds().height - titleBarHeight })
+        borderView.setBounds({ x: margin - 1, y: titleBarHeight, width: 2 + -2 * margin + window.getBounds().width - rightMargin, height: -1 * margin + window.getBounds().height - titleBarHeight })
+        mainView.setBounds({ x: margin, y: titleBarHeight + 1, width: -2 * margin + window.getBounds().width - rightMargin, height: -2 + -1 * margin + window.getBounds().height - titleBarHeight })
     })
     window.on('unmaximize', (e) => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
-        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+        // mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+        borderView.setBounds({ x: margin - 1, y: titleBarHeight, width: 2 + -2 * margin + window.getBounds().width - rightMargin, height: -1 * margin + window.getBounds().height - titleBarHeight })
+        mainView.setBounds({ x: margin, y: titleBarHeight + 1, width: -2 * margin + window.getBounds().width - rightMargin, height: -2 + -1 * margin + window.getBounds().height - titleBarHeight })
     })
     window.on('resize', (e) => {
         titleView.setBounds({ x: 0, y: 0, width: window.getBounds().width, height: titleBarHeight })
-        mainView.setBounds({ x: 0, y: titleBarHeight, width: window.getBounds().width, height: window.getBounds().height - titleBarHeight })
+        borderView.setBounds({ x: margin - 1, y: titleBarHeight, width: 2 + -2 * margin + window.getBounds().width - rightMargin, height: -1 * margin + window.getBounds().height - titleBarHeight })
+        mainView.setBounds({ x: margin, y: titleBarHeight + 1, width: -2 * margin + window.getBounds().width - rightMargin, height: -2 + -1 * margin + window.getBounds().height - titleBarHeight })
     })
     window.on('focus', () => {
         let menu = Menu.getApplicationMenu()
@@ -792,6 +904,10 @@ function handleDownload(item, webContents) {
 function getWebContents(window) {
     let views = window.contentView.children
     return views.length ? views[1].webContents : window.webContents
+}
+
+function getNavigationHistory(window) {
+    return getWebContents(window).navigationHistory
 }
 
 function createAboutWindow() {
@@ -972,7 +1088,10 @@ function createAppMenu() {
             }),
             new MenuItem({
                 label: 'Check for Updates...',
-                click: () => checkForUpdates(true)
+                click: () => checkForUpdates({
+                    forceCheckForUpdates: true,
+                    showUpToDateDialog: true
+                })
             }),
             new MenuItem({ type: 'separator' }),
             new MenuItem({
@@ -1012,7 +1131,7 @@ function createAppMenu() {
                 accelerator: 'Cmd+Left',
                 click: (menuItem, browserWindow, event) => {
                     if (browserWindow) {
-                        getWebContents(browserWindow).goBack()
+                        getNavigationHistory(browserWindow).goBack()
                     }
                 }
             }),
@@ -1023,7 +1142,7 @@ function createAppMenu() {
                 accelerator: 'Cmd+Right',
                 click: (menuItem, browserWindow, event) => {
                     if (browserWindow) {
-                        getWebContents(browserWindow).goForward()
+                        getNavigationHistory(browserWindow).goForward()
                     }
                 }
             }),
@@ -1380,17 +1499,17 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
     menu.append(new MenuItem({
         label: 'Go Back',
         visible: webContents,
-        enabled: webContents && webContents.canGoBack(),
+        enabled: webContents && webContents.navigationHistory.canGoBack(),
         click: (menuItem, browserWindow, event) => {
-            if (webContents) webContents.goBack()
+            if (webContents) webContents.navigationHistory.goBack()
         }
     }))
     menu.append(new MenuItem({
         label: 'Go Forward',
         visible: webContents,
-        enabled: webContents && webContents.canGoForward(),
+        enabled: webContents && webContents.navigationHistory.canGoForward(),
         click: (menuItem, browserWindow, event) => {
-            if (webContents) webContents.goForward()
+            if (webContents) webContents.navigationHistory.goForward()
         }
     }))
     menu.append(new MenuItem({
@@ -1493,7 +1612,10 @@ function createContextMenuForWindow(webContents, { editFlags, isEditable, linkUR
         }))
         menu.append(new MenuItem({
             label: 'Check for Updates...',
-            click: () => checkForUpdates(true),
+            click: () => checkForUpdates({
+                forceCheckForUpdates: true,
+                showUpToDateDialog: true
+            }),
         }))
     }
     return menu
