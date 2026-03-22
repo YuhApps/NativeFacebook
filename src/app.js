@@ -9,7 +9,7 @@ const fs = require('fs')
 const settings = require('./settings')
 
 const VERSION_CODE = 10
-const BUILD_DATE = '2025.10.15'
+const BUILD_DATE = '2026.03.16'
 const DOWNLOADS_JSON_PATH = app.getPath('userData') + path.sep + 'downloads.json'
 const DEFAULT_WINDOW_BOUNDS = { x: undefined, y: undefined, width: 1280, height: 800 }
 const FACEBOOK_URL = 'https://www.facebook.com'
@@ -365,6 +365,12 @@ ipcMain.on('open-dl-page', (event) => openDownloadPageOnGitHub())
 
 ipcMain.on('open-yh-page', (event) => createBrowserWindow('https://yuhapps.dev'))
 
+ipcMain.on('clear-app-cache', async (event) => {
+    let s = session.defaultSession
+    await s.clearCache()
+    await s.clearCodeCaches()
+})
+
 /** End of Basic Electron app events. */
 
 /**************************************/
@@ -686,7 +692,8 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     let max = settings.get('max') || '0' // Windows and Linux only
     let platform = process.platform
     let titleBarHeight = platform === 'win32' ? 32 : 28
-    let rightMargin = 0 // process.platform === 'win32' ? 14 : 0
+    let rightMargin = 0
+    let windows10 = platform === 'win32' && Number(release().split('.')[0]) === 10
     let window = new BaseWindow({
         x: x,
         y: y,
@@ -696,19 +703,18 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
         minWidth: 800,
         show: false,
         vibrancy: 'header',
+        backgroundColor: windows10 ? '#ffffff' : undefined,
         backgroundMaterial: 'mica',
         titleBarStyle: 'hidden',
         tabbingIdentifier: 'WebView',
         title: 'Facebook',
         webPreferences: {
-            webSecurity: true,
             spellcheck: settings.get('spell') === '1' || false,
             scrollBounce: true,
             sandbox: sandbox,
             plugins: true,
         },
     })
-    window.setWindowButtonVisibility(platform === 'darwin')
     if (max === '1') {
         window.maximize()
     }
@@ -729,13 +735,13 @@ function createBrowserWindowWithCustomTitleBar(url, options, browserWindowConstr
     // Main content
     let mainView = new WebContentsView({
         webPreferences: {
-            sandbox: sandbox,
+            sandbox: true,
             scrollBounce: true,
             spellcheck: settings.get('spell') === '1' || false,
-            enableRemoteModule: false,
+            // enableRemoteModule: false,
             contextIsolation: true,
-            preload: blank ? path.join(__dirname, 'blank_preload.js') : path.join(__dirname, 'preload.js'),
-            nodeIntegration: true,
+            // preload: blank ? path.join(__dirname, 'blank_preload.js') : path.join(__dirname, 'preload.js'),
+            nodeIntegration: false
         }
     })
     // mainView.setBackgroundColor(titleBarAppearance === '0' ? undefined : titleBarAppearance === '1' ? '#ffffffff' : titleBarAppearance === '2' ? '#ff232425' : '#ff000000')
